@@ -32,7 +32,7 @@ function handleLogout() {
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
           <Ticket className="size-8 text-blue-600" />
-          <span className="text-2xl">TicketKurwaHub</span>
+          <span className="text-2xl">PanBilecik</span>
         </Link>
 
         <nav className="hidden md:flex items-center gap-6">
