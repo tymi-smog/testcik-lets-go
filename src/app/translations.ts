@@ -1,8 +1,8 @@
 export const categoryLabels: Record<string, string> = {
-  all: "Wszystkie",
-  music: "Muzyka",
-  festival: "Festiwal",
-  sports: "Sport",
-  comedy: "Stand-up",
-  conference: "Konferencje",
+  Wszystkie: "Wszystkie",
+  Muzyka: "Muzyka",
+  Festiwal: "Festiwal",
+  Sport: "Sport",
+  Kabaret: "Kabaret",
+  Konferencja: "Konferencja",
 };

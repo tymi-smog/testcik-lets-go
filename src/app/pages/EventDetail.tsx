@@ -170,7 +170,7 @@ const handleAddToCart = () => {
                           <p className="text-xs text-gray-500 mt-1">{ticket.description}</p>
                         )}
                       </div>
-                      <p className="text-lg">${ticket.price}</p>
+                      <p className="text-lg">{ticket.price} zł</p>
                     </div>
                     <div className="flex items-center justify-between mt-3">
                       <div className="flex items-center gap-2">
@@ -205,7 +205,7 @@ const handleAddToCart = () => {
                     </div>
                     <div className="flex justify-between text-lg">
                       <span>Łączna cena:</span>
-                      <span>${totalPrice}</span>
+                      <span>{totalPrice} zł</span>
                     </div>
                   </div>
                 )}
