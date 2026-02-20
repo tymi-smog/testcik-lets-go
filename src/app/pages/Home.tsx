@@ -6,22 +6,22 @@ import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Calendar, MapPin, Clock } from 'lucide-react';
 
-const categories = ['all', 'music', 'sports', 'theater', 'comedy', 'festival', 'conference'];
+const categories = ['Wszystkie', 'Muzyka', 'Sport', 'Teatr', 'Kabaret', 'Festiwal', 'Konferencja'];
 const categoryLabels: Record<string, string> = {
-  all: 'Wszystkie',
-  music: 'Muzyka',
-  sports: 'Sport',
-  theater: 'Teatr',
-  comedy: 'Stand-up',
-  festival: 'Festiwal',
-  conference: 'Konferencje',
+Wszystkie: 'Wszystkie',
+  Muzyka: 'Muzyka',
+  Sport: 'Sport',
+  Teatr: 'Teatr',
+  Kabaret: 'Kabaret',
+  Festiwal: 'Festiwal',
+  Konferencja: 'Konferencja',
 };
 
 export function Home() {
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedCategory, setSelectedCategory] = useState('Wszystkie');
 
   const filteredEvents =
-    selectedCategory === 'all'
+    selectedCategory === 'Wszystkie'
       ? events
       : events.filter((event) => event.category === selectedCategory);
 
