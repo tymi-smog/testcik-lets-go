@@ -1,5 +1,9 @@
 {
   "buildCommand": "vite build",
   "installCommand": "npm install",
-  "framework": "vite"
+  "framework": "vite",
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/api/$1" },
+    { "src": "/(.*)", "dest": "/" }
+  ]
 }
