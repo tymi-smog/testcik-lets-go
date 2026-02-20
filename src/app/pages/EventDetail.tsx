@@ -20,9 +20,9 @@ export function EventDetail() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <p className="text-xl mb-4">Event not found</p>
+          <p className="text-xl mb-4">Wydarzenie nie znalezione</p>
           <Link to="/">
-            <Button>Back to Events</Button>
+            <Button>Wróć do wydarzeń</Button>
           </Link>
         </div>
       </div>
@@ -84,7 +84,7 @@ export function EventDetail() {
             <Link to="/">
               <Button variant="ghost" className="text-white hover:text-white mb-4">
                 <ArrowLeft className="size-4 mr-2" />
-                Back to Events
+                Wróć do wydarzeń
               </Button>
             </Link>
             <Badge className="mb-3">{event.category}</Badge>
@@ -98,15 +98,15 @@ export function EventDetail() {
           <div className="md:col-span-2 space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Event Details</CardTitle>
+                <CardTitle>Szczegóły wydarzenia</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center gap-3">
                   <Calendar className="size-5 text-blue-600" />
                   <div>
-                    <p className="text-sm text-gray-600">Date</p>
+                    <p className="text-sm text-gray-600">Data</p>
                     <p>
-                      {new Date(event.date).toLocaleDateString('en-US', {
+                      {new Date(event.Data).toLocaleDateString('en-US', {
                         weekday: 'long',
                         month: 'long',
                         day: 'numeric',
@@ -118,16 +118,16 @@ export function EventDetail() {
                 <div className="flex items-center gap-3">
                   <Clock className="size-5 text-blue-600" />
                   <div>
-                    <p className="text-sm text-gray-600">Time</p>
-                    <p>{event.time}</p>
+                    <p className="text-sm text-gray-600">Czas</p>
+                    <p>{event.Godzina}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <MapPin className="size-5 text-blue-600" />
                   <div>
-                    <p className="text-sm text-gray-600">Venue</p>
-                    <p>{event.venue}</p>
-                    <p className="text-sm text-gray-600">{event.location}</p>
+                    <p className="text-sm text-gray-600">Miejsce</p>
+                    <p>{event.Miejsce}</p>
+                    <p className="text-sm text-gray-600">{event.Lokalizacja}</p>
                   </div>
                 </div>
               </CardContent>
@@ -135,7 +135,7 @@ export function EventDetail() {
 
             <Card>
               <CardHeader>
-                <CardTitle>About This Event</CardTitle>
+                <CardTitle>O tym wydarzeniu</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-gray-700 leading-relaxed">{event.description}</p>
@@ -146,7 +146,7 @@ export function EventDetail() {
           <div>
             <Card className="sticky top-24">
               <CardHeader>
-                <CardTitle>Select Tickets</CardTitle>
+                <CardTitle>Wybierz bilety</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 {event.ticketTypes.map((ticket) => (
@@ -155,7 +155,7 @@ export function EventDetail() {
                       <div className="flex-1">
                         <p>{ticket.name}</p>
                         <p className="text-sm text-gray-600">
-                          {ticket.available} available
+                          {ticket.available} Dostępne
                         </p>
                         {ticket.description && (
                           <p className="text-xs text-gray-500 mt-1">{ticket.description}</p>
@@ -191,11 +191,11 @@ export function EventDetail() {
                 {totalSelected > 0 && (
                   <div className="border-t pt-4 mt-4 space-y-2">
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Total Tickets:</span>
+                      <span className="text-gray-600">Łącznie biletów:</span>
                       <span>{totalSelected}</span>
                     </div>
                     <div className="flex justify-between text-lg">
-                      <span>Total Price:</span>
+                      <span>Łączna cena:</span>
                       <span>${totalPrice}</span>
                     </div>
                   </div>
@@ -208,7 +208,7 @@ export function EventDetail() {
                   disabled={totalSelected === 0}
                 >
                   <Check className="size-5 mr-2" />
-                  Add to Cart
+                  Dodaj do koszyka
                 </Button>
               </CardContent>
             </Card>

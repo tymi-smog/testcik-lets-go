@@ -20,7 +20,7 @@ export function Checkout() {
 
     // Simulate payment processing
     setTimeout(() => {
-      toast.success('Order confirmed! Check your email for tickets.');
+      toast.success('Złożono zamówienie. Bilety zostaną wysłane na twój adres email.');
       clearCart();
       setIsProcessing(false);
       navigate('/');
@@ -32,9 +32,9 @@ export function Checkout() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <ShoppingCart className="size-16 mx-auto text-gray-400 mb-4" />
-          <h2 className="text-2xl mb-2">Your cart is empty</h2>
-          <p className="text-gray-600 mb-6">Browse events and add tickets to your cart</p>
-          <Button onClick={() => navigate('/')}>Browse Events</Button>
+          <h2 className="text-2xl mb-2">Twój koszyk jest pusty</h2>
+          <p className="text-gray-600 mb-6">Przeglądaj wydarzenia i dodaj bilety do koszyka</p>
+          <Button onClick={() => navigate('/')}>Przeglądaj wydarzenia</Button>
         </div>
       </div>
     );
@@ -43,13 +43,13 @@ export function Checkout() {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="container mx-auto px-4">
-        <h1 className="text-4xl mb-8">Checkout</h1>
+        <h1 className="text-4xl mb-8">Koszyk</h1>
 
         <div className="grid lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Your Tickets</CardTitle>
+                <CardTitle>Twoje bilety</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 {items.map((item) => (
@@ -57,7 +57,7 @@ export function Checkout() {
                     <div className="flex-1">
                       <h3 className="mb-1">{item.eventTitle}</h3>
                       <p className="text-sm text-gray-600">{item.ticketTypeName}</p>
-                      <p className="text-sm">${item.price} each</p>
+                      <p className="text-sm">{item.price}zł każdy</p>
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="flex items-center gap-2 border rounded px-2">
@@ -75,7 +75,7 @@ export function Checkout() {
                           +
                         </button>
                       </div>
-                      <p className="w-20 text-right">${item.price * item.quantity}</p>
+                      <p className="w-20 text-right">{item.price * item.quantity}zł</p>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -91,17 +91,17 @@ export function Checkout() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Payment Information</CardTitle>
+                <CardTitle>Informacje o płatności</CardTitle>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleCheckout} className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="firstName">First Name</Label>
+                      <Label htmlFor="firstName">Imię</Label>
                       <Input id="firstName" required />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="lastName">Last Name</Label>
+                      <Label htmlFor="lastName">Nazwisko</Label>
                       <Input id="lastName" required />
                     </div>
                   </div>
@@ -114,7 +114,7 @@ export function Checkout() {
                   <Separator />
 
                   <div className="space-y-2">
-                    <Label htmlFor="cardNumber">Card Number</Label>
+                    <Label htmlFor="cardNumber">Numer karty</Label>
                     <Input
                       id="cardNumber"
                       placeholder="1234 5678 9012 3456"
@@ -125,7 +125,7 @@ export function Checkout() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="expiry">Expiry Date</Label>
+                      <Label htmlFor="expiry">Data ważności</Label>
                       <Input id="expiry" placeholder="MM/YY" required />
                     </div>
                     <div className="space-y-2">
@@ -136,7 +136,9 @@ export function Checkout() {
 
                   <Button type="submit" className="w-full" size="lg" disabled={isProcessing}>
                     <CreditCard className="size-5 mr-2" />
-                    {isProcessing ? 'Processing...' : `Pay $${getTotal()}`}
+                    {isProcessing ? 'Procesowanie...' : `Zapłać ${(getTotal() * 1.05).toFixed(2)} zł`
+}
+
                   </Button>
                 </form>
               </CardContent>
@@ -146,7 +148,7 @@ export function Checkout() {
           <div>
             <Card className="sticky top-24">
               <CardHeader>
-                <CardTitle>Order Summary</CardTitle>
+                <CardTitle>Podsumowanie zamówienia</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
@@ -158,7 +160,7 @@ export function Checkout() {
                       <span className="text-gray-600">
                         {item.quantity}x {item.ticketTypeName}
                       </span>
-                      <span>${item.price * item.quantity}</span>
+                      <span>{item.price * item.quantity}zł</span>
                     </div>
                   ))}
                 </div>
@@ -167,20 +169,20 @@ export function Checkout() {
 
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Subtotal</span>
-                    <span>${getTotal()}</span>
+                    <span className="text-gray-600">Łączna kwota</span>
+                    <span>{getTotal()}zł</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Service Fee</span>
-                    <span>${(getTotal() * 0.05).toFixed(2)}</span>
+                    <span className="text-gray-600">Opłata serwisowa</span>
+                    <span>{(getTotal() * 0.05).toFixed(2)}zł</span>
                   </div>
                 </div>
 
                 <Separator />
 
                 <div className="flex justify-between text-lg">
-                  <span>Total</span>
-                  <span>${(getTotal() * 1.05).toFixed(2)}</span>
+                  <span>Łącznie</span>
+                  <span>{(getTotal() * 1.05).toFixed(2)}zł</span>
                 </div>
               </CardContent>
             </Card>
