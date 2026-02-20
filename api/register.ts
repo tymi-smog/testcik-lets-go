@@ -3,7 +3,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { sql } from "./lib/db.js";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
-import { resend } from "./lib/resend";
+import { resend } from "./lib/resend.js";
 
 export default async function handler(
   req: VercelRequest,
