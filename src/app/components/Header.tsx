@@ -32,15 +32,15 @@ function handleLogout() {
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
           <Ticket className="size-8 text-blue-600" />
-          <span className="text-2xl">TicketHub</span>
+          <span className="text-2xl">TicketKurwaHub</span>
         </Link>
 
         <nav className="hidden md:flex items-center gap-6">
           <Link to="/" className="hover:text-blue-600 transition-colors">
-            Events
+            Wydarzenia
           </Link>
           <Link to="/checkout" className="hover:text-blue-600 transition-colors">
-            Checkout
+            Płatność
           </Link>
         </nav>
 
@@ -90,7 +90,7 @@ function handleLogout() {
   <Link to="/checkout">
     <Button variant="outline" className="relative">
       <ShoppingCart className="size-5 mr-2" />
-      Cart
+      Koszyk
       {itemCount > 0 && (
         <Badge className="absolute -top-2 -right-2 size-6 flex items-center justify-center p-0 rounded-full">
           {itemCount}

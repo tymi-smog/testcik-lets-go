@@ -61,9 +61,19 @@ export function EventDetail() {
     });
 
     if (itemsAdded > 0) {
-      toast.success(`Added ${itemsAdded} ticket${itemsAdded > 1 ? 's' : ''} to cart!`);
-      setSelectedTickets({});
-    }
+      if(itemsAdded > 4){
+        toast.success(`Dodano ${itemsAdded} biletów do koszyka!`);
+        setSelectedTickets({});
+      }
+      else if(itemsAdded > 1){
+        toast.success(`Dodano ${itemsAdded} bilety do koszyka!`);
+        setSelectedTickets({});
+      }
+      else{
+        toast.success(`Dodano ${itemsAdded} bilet do koszyka!`);
+        setSelectedTickets({});
+
+      }
   };
 
   const totalSelected = Object.values(selectedTickets).reduce((sum, qty) => sum + qty, 0);
@@ -106,7 +116,7 @@ export function EventDetail() {
                   <div>
                     <p className="text-sm text-gray-600">Data</p>
                     <p>
-                      {new Date(event.Data).toLocaleDateString('en-US', {
+                      {new Date(event.Data).toLocaleDateString('pl-PL', {
                         weekday: 'long',
                         month: 'long',
                         day: 'numeric',
