@@ -3,6 +3,7 @@ import { ShoppingCart, Ticket } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
+import  ikona  from '../public/ikonasigmy.svg';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,7 +32,7 @@ function handleLogout() {
     <header className="border-b bg-white sticky top-0 z-50">
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
-          <Ticket className="size-8 text-blue-600" />
+          <img src={ikona} alt="Logo" className="size-8 text-blue-600" />
           <span className="text-2xl">PanBilecik</span>
         </Link>
 
