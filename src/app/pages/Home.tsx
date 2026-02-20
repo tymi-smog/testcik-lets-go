@@ -27,7 +27,8 @@ export function Home() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-16">
+      <div className="bg-[#020f0a] text-white py-16">
+
         <div className="container mx-auto px-4">
           <h1 className="text-5xl mb-4">Odkryj niesamowite wydarzenia</h1>
           <p className="text-xl opacity-90">Znajdź swoje wydarzenie i kup bilet już teraz!</p>
