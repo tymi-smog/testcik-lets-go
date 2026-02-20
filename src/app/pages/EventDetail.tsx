@@ -41,40 +41,39 @@ export function EventDetail() {
     });
   };
 
-  const handleAddToCart = () => {
-    let itemsAdded = 0;
-    Object.entries(selectedTickets).forEach(([ticketId, quantity]) => {
-      const ticketType = event.ticketTypes.find((t) => t.id === ticketId);
-      if (ticketType && quantity > 0) {
-        addToCart(
-          {
-            eventId: event.id,
-            eventTitle: event.title,
-            ticketTypeId: ticketType.id,
-            ticketTypeName: ticketType.name,
-            price: ticketType.price,
-          },
-          quantity
-        );
-        itemsAdded += quantity;
-      }
-    });
+const handleAddToCart = () => {
+  let itemsAdded = 0;
 
-    if (itemsAdded > 0) {
-      if(itemsAdded > 4){
-        toast.success(`Dodano ${itemsAdded} biletów do koszyka!`);
-        setSelectedTickets({});
-      }
-      else if(itemsAdded > 1){
-        toast.success(`Dodano ${itemsAdded} bilety do koszyka!`);
-        setSelectedTickets({});
-      }
-      else{
-        toast.success(`Dodano ${itemsAdded} bilet do koszyka!`);
-        setSelectedTickets({});
+  Object.entries(selectedTickets).forEach(([ticketId, quantity]) => {
+    const ticketType = event.ticketTypes.find((t) => t.id === ticketId);
+    if (ticketType && quantity > 0) {
+      addToCart(
+        {
+          eventId: event.id,
+          eventTitle: event.title,
+          ticketTypeId: ticketType.id,
+          ticketTypeName: ticketType.name,
+          price: ticketType.price,
+        },
+        quantity
+      );
+      itemsAdded += quantity;
+    }
+  });
 
-      }
-  };
+  if (itemsAdded > 0) {
+    if (itemsAdded > 4) {
+      toast.success(`Dodano ${itemsAdded} biletów do koszyka!`);
+    } else if (itemsAdded > 1) {
+      toast.success(`Dodano ${itemsAdded} bilety do koszyka!`);
+    } else {
+      toast.success(`Dodano ${itemsAdded} bilet do koszyka!`);
+    }
+
+    setSelectedTickets({});
+  }
+};
+
 
   const totalSelected = Object.values(selectedTickets).reduce((sum, qty) => sum + qty, 0);
   const totalPrice = Object.entries(selectedTickets).reduce((sum, [ticketId, quantity]) => {
