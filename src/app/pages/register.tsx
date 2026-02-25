@@ -16,7 +16,7 @@ export function Register() {
     });
 
     const data = await res.json();
-    console.log(data);
+    console.log("REGISTER RESPONSE:", data);
   };
 
   return (
