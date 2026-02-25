@@ -50,7 +50,7 @@ export default async function handler(
     }
 
     await resend.emails.send({
-      from: "onboarding@resend.dev",
+      from: "register@strona.panbilecik.eu",
       to: email,
       subject: "Potwierdź konto",
       html: `
