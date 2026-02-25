@@ -21,7 +21,7 @@ const handleRegister = async (e) => {
   console.log("REGISTER RESPONSE:", data);
 
   if (res.ok) {
-    navigate("/verify-email"); 
+    navigate("/verify-email");
   } else {
     alert(data.error);
   }
