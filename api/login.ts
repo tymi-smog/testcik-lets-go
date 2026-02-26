@@ -7,13 +7,11 @@ export default async function handler(
   req: VercelRequest,
   res: VercelResponse
 ) {
-  // tylko POST
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
   try {
-    // Vercel czasem daje body jako string
     const body =
       typeof req.body === "string"
         ? JSON.parse(req.body)
@@ -25,30 +23,32 @@ export default async function handler(
       return res.status(400).json({ error: "Missing fields" });
     }
 
-    // pobierz usera z bazy
+    //  pobierz usera
     const users = await sql`
       SELECT * FROM users WHERE email = ${email}
     `;
-    if (!user.is_verified) {
-  return res.status(403).json({
-    error: "Konto nie zostało jeszcze zweryfikowane",
-  });
-}
 
-    const user = users[0];
+    const user = users[0]; //  NAJPIERW definiujemy usera
 
     if (!user) {
       return res.status(401).json({ error: "Nieprawidłowy login" });
+    }
+
+    //  VERIFY CHECK — Neon może zwrócić "t" zamiast true
+    if (user.is_verified !== true && user.is_verified !== "t") {
+      return res.status(403).json({
+        error: "Konto nie zostało jeszcze zweryfikowane",
+      });
     }
 
     // sprawdź hasło
     const valid = await bcrypt.compare(password, user.password);
 
     if (!valid) {
-      return res.status(401).json({ error: "Nieprawidłowe hasłó" });
+      return res.status(401).json({ error: "Nieprawidłowe hasło" });
     }
 
-    // generuj JWT
+    //  JWT
     const token = jwt.sign(
       {
         userId: user.user_id,
@@ -62,6 +62,6 @@ export default async function handler(
     return res.status(200).json({ token });
   } catch (err) {
     console.error("LOGIN ERROR:", err);
-    return res.status(500).json({ error: "Konto nie aktywowane za pomocą maila" });
+    return res.status(500).json({ error: "Login failed" });
   }
 }
