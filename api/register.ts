@@ -30,7 +30,7 @@ export default async function handler(
     }
 
     const existing = await sql`
-      SELECT user_id FROM users WHERE email = ${email}
+      SELECT id FROM users WHERE email = ${email}
     `;
 
     if (existing.length) {
