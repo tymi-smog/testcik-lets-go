@@ -56,7 +56,7 @@ export default async function handler(
       html: `
         <h2>Witaj ${username} 👋</h2>
         <p>Kliknij aby aktywować konto:</p>
-        <a href="${process.env.BASE_URL}/api/verify?token=${token}">
+        <a href="${process.env.BASE_URL}api/verify?token=${token}">
           Potwierdź konto
         </a>
       `,
