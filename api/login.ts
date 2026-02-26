@@ -40,7 +40,7 @@ export default async function handler(
     const valid = await bcrypt.compare(password, user.password);
 
     if (!valid) {
-      return res.status(401).json({ error: "Nieprawidłowy login" });
+      return res.status(401).json({ error: "Nieprawidłowe hasłó" });
     }
 
     // generuj JWT
@@ -57,6 +57,6 @@ export default async function handler(
     return res.status(200).json({ token });
   } catch (err) {
     console.error("LOGIN ERROR:", err);
-    return res.status(500).json({ error: "Login failed" });
+    return res.status(500).json({ error: "Konto nie aktywowane za pomocą maila" });
   }
 }
