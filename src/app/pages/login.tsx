@@ -31,10 +31,8 @@ export function Login() {
         return;
       }
 
-      // zapis tokena
       localStorage.setItem("token", data.token);
 
-      // redirect na home
       window.location.href = "/";
     } catch (err) {
       console.error(err);
@@ -78,20 +76,17 @@ export function Login() {
           {loading ? "Logowanie..." : "Zaloguj się"}
         </button>
 
+        {/*  LINKI AUTH */}
         <div className="flex justify-between text-sm mt-3 text-gray-500">
-  <Link to="/forgot-password" className="hover:underline">
-    Zapomniałeś hasła?
-  </Link>
-        
+          <Link to="/forgot-password" className="hover:underline">
+            Zapomniałeś hasła?
+          </Link>
 
-<p className="text-sm text-center text-gray-500">
-  Nie masz konta?{" "}
-  <a href="/register" className="underline">
-    Zarejestruj się
-  </a>
-</p>
+          <Link to="/register" className="underline">
+            Zarejestruj się
+          </Link>
+        </div>
       </form>
     </div>
   );
 }
-
