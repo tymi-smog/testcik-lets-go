@@ -29,6 +29,11 @@ export default async function handler(
     const users = await sql`
       SELECT * FROM users WHERE email = ${email}
     `;
+    if (!user.is_verified) {
+  return res.status(403).json({
+    error: "Konto nie zostało jeszcze zweryfikowane",
+  });
+}
 
     const user = users[0];
 
