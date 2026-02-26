@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 
 export function Login() {
   const [email, setEmail] = useState("");
@@ -77,12 +78,18 @@ export function Login() {
           {loading ? "Logowanie..." : "Zaloguj się"}
         </button>
 
-        <p className="text-sm text-center text-gray-500">
-          Nie masz konta?{" "}
-          <a href="/register" className="underline">
-            Zarejestruj się
-          </a>
-        </p>
+        <div className="flex justify-between text-sm mt-3 text-gray-500">
+  <Link to="/forgot-password" className="hover:underline">
+    Zapomniałeś hasła?
+  </Link>
+        
+
+<p className="text-sm text-center text-gray-500">
+  Nie masz konta?{" "}
+  <a href="/register" className="underline">
+    Zarejestruj się
+  </a>
+</p>
       </form>
     </div>
   );
