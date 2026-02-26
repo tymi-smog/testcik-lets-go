@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useNavigate } from "react-router-dom";
 import { ShoppingCart } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { Badge } from './ui/badge';
@@ -17,6 +18,7 @@ export function Header() {
   const { getItemCount } = useCart();
   const itemCount = getItemCount();
 const [user, setUser] = useState<any>(null);
+  const navigate = useNavigate();
 
 useEffect(() => {
   const token =
@@ -38,7 +40,8 @@ const isLoggedIn = !!user;
 
 function handleLogout() {
   localStorage.removeItem("token");
-  window.location.reload();
+  setUser(null);       // odświeża navbar bez reload
+  navigate("/login");  //  przekierowanie
 }
   return (
     <header className="border-b bg-white sticky top-0 z-50">
