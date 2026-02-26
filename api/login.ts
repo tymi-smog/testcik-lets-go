@@ -48,6 +48,7 @@ export default async function handler(
       {
         userId: user.user_id,
         username: user.username,
+        email: user.email,
       },
       process.env.JWT_SECRET as string,
       { expiresIn: "7d" }

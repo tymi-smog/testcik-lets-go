@@ -3,6 +3,7 @@ import { ShoppingCart } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
+import { useEffect, useState } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,13 +16,25 @@ import { User } from "lucide-react";
 export function Header() {
   const { getItemCount } = useCart();
   const itemCount = getItemCount();
+const [user, setUser] = useState<any>(null);
+
+useEffect(() => {
   const token =
-  typeof window !== "undefined"
-    ? localStorage.getItem("token")
-    : null;
+    typeof window !== "undefined"
+      ? localStorage.getItem("token")
+      : null;
 
+  if (!token) return;
 
-const isLoggedIn = !!token;
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    setUser(payload);
+  } catch (e) {
+    console.error("JWT decode error");
+  }
+}, []);
+
+const isLoggedIn = !!user;
 
 function handleLogout() {
   localStorage.removeItem("token");
@@ -55,6 +68,12 @@ function handleLogout() {
   </DropdownMenuTrigger>
 
   <DropdownMenuContent align="end">
+    {user && (
+  <div className="px-3 py-2 border-b mb-1">
+    <p className="text-sm font-semibold">{user.username}</p>
+    <p className="text-xs text-muted-foreground">{user.email}</p>
+  </div>
+)}
     {!isLoggedIn && (
       <>
         <DropdownMenuItem asChild>
