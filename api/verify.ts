@@ -13,7 +13,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // sprawdź czy user istnieje
     const user = await sql`
-      SELECT user_id FROM users
+      SELECT id FROM users
       WHERE verification_token = ${token}
     `;
 
