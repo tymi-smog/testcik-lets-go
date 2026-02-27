@@ -5,10 +5,10 @@ import { Home } from "./pages/Home";
 import { EventDetail } from "./pages/EventDetail";
 import { Checkout } from "./pages/Checkout";
 
-import { Login } from "./pages/Login";
-import { Register } from "./pages/Register";
-import { Profile } from "./pages/Profile";
-import { MyEvents } from "./pages/MyEvents";
+import { Login } from "./pages/login";
+import { Register } from "./pages/register";
+import { Profile } from "./pages/profile";
+import { MyEvents } from "./pages/myevents";
 
 import { VerifyEmail } from "./pages/VerifyEmail";
 import { ForgotPassword } from "./pages/ForgotPassword";
