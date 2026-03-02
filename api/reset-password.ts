@@ -22,8 +22,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const users = await sql`
       SELECT * FROM users
-      WHERE reset_token = ${token}
-      AND reset_expires > NOW()
+      WHERE reset_password_token = ${token}
+      AND reset_password_expires > NOW()
     `;
 
     const user = users[0];
@@ -37,9 +37,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     await sql`
       UPDATE users
       SET password = ${hash},
-          reset_token = NULL,
-          reset_expires = NULL
-      WHERE user_id = ${user.user_id}
+          reset_password_token = NULL,
+          reset_password_expires = NULL
+      WHERE id = ${user.id}
     `;
 
     return res.status(200).json({ success: true });
