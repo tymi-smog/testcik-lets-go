@@ -37,7 +37,7 @@ export function EventDetail() {
   const [selectedTickets, setSelectedTickets] = useState<Record<number, number>>({});
 
   useEffect(() => {
-    fetch(`http://localhost:3000/api/events/${id}`)
+    fetch(`/api/events/${id}`)
       .then((res) => res.json())
       .then((data) => setEvent(data))
       .finally(() => setLoading(false));
