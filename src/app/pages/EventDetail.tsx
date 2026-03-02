@@ -1,206 +1,230 @@
-import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router";
-import { useCart } from "../context/CartContext";
-import { Button } from "../components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
-import { Badge } from "../components/ui/badge";
-import { Calendar, MapPin, Minus, Plus, ArrowLeft, Check } from "lucide-react";
-import { toast } from "sonner";
 
-type TicketType = {
-  id: number;
-  event_id: number;
-  name: string;
-  price: number;
-  available: number;
-  description?: string;
-};
-
-type EventType = {
-  id: number;
-  title: string;
-  description: string;
-  location: string;
-  date: string;
-  ticket_price: number;
-  available_tickets: number;
-  category: string;
-  ticketTypes: TicketType[];
-};
+import { useState } from 'react';
+import { useParams, useNavigate, Link } from 'react-router';
+import { events } from '../data/events';
+import { useCart } from '../context/CartContext';
+import { Button } from '../components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Badge } from '../components/ui/badge';
+import { Calendar, MapPin, Clock, Minus, Plus, ArrowLeft, Check } from 'lucide-react';
+import { toast } from 'sonner';
 
 export function EventDetail() {
   const { id } = useParams();
-  if (!id) return null;
+  const navigate = useNavigate();
   const { addToCart } = useCart();
+  const event = events.find((e) => e.id === id);
 
-  const [event, setEvent] = useState<EventType | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [selectedTickets, setSelectedTickets] = useState<Record<number, number>>({});
-
-  useEffect(() => {
-    fetch(`/api/events/${Number(id)}`)
-      .then((res) => res.json())
-      .then((data) => setEvent(data))
-      .finally(() => setLoading(false));
-  }, [id]);
-
-  if (loading) {
-    return <div className="p-10">Ładowanie...</div>;
-  }
+  const [selectedTickets, setSelectedTickets] = useState<Record<string, number>>({});
 
   if (!event) {
-    return <div className="p-10">Wydarzenie nie znalezione</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-xl mb-4">Wydarzenie nie znalezione</p>
+          <Link to="/">
+            <Button>Wróć do wydarzeń</Button>
+          </Link>
+        </div>
+      </div>
+    );
   }
 
-  const updateTicketQuantity = (ticketId: number, change: number) => {
+  const updateTicketQuantity = (ticketId: string, change: number) => {
     setSelectedTickets((prev) => {
       const current = prev[ticketId] || 0;
       const newValue = Math.max(0, Math.min(10, current + change));
+      if (newValue === 0) {
+        const { [ticketId]: _, ...rest } = prev;
+        return rest;
+      }
       return { ...prev, [ticketId]: newValue };
     });
   };
 
-  const handleAddToCart = () => {
-    let itemsAdded = 0;
+const handleAddToCart = () => {
+  let itemsAdded = 0;
 
-    Object.entries(selectedTickets).forEach(([ticketId, quantity]) => {
-      const ticket = event.ticketTypes.find(
-        (t) => t.id === Number(ticketId)
+  Object.entries(selectedTickets).forEach(([ticketId, quantity]) => {
+    const ticketType = event.ticketTypes.find((t) => t.id === ticketId);
+    if (ticketType && quantity > 0) {
+      addToCart(
+        {
+          eventId: event.id,
+          eventTitle: event.title,
+          ticketTypeId: ticketType.id,
+          ticketTypeName: ticketType.name,
+          price: ticketType.price,
+        },
+        quantity
       );
-
-      if (ticket && quantity > 0) {
-        addToCart(
-          {
-            eventId: event.id,
-            eventTitle: event.title,
-            ticketTypeId: ticket.id,
-            ticketTypeName: ticket.name,
-            price: ticket.price,
-          },
-          quantity
-        );
-        itemsAdded += quantity;
-      }
-    });
-
-    if (itemsAdded > 0) {
-      toast.success(`Dodano ${itemsAdded} biletów do koszyka!`);
-      setSelectedTickets({});
+      itemsAdded += quantity;
     }
-  };
+  });
 
-  const totalSelected = Object.values(selectedTickets).reduce(
-    (sum, qty) => sum + qty,
-    0
-  );
+  if (itemsAdded > 0) {
+    if (itemsAdded > 4) {
+      toast.success(`Dodano ${itemsAdded} biletów do koszyka!`);
+    } else if (itemsAdded > 1) {
+      toast.success(`Dodano ${itemsAdded} bilety do koszyka!`);
+    } else {
+      toast.success(`Dodano ${itemsAdded} bilet do koszyka!`);
+    }
 
-  const totalPrice = Object.entries(selectedTickets).reduce(
-    (sum, [ticketId, quantity]) => {
-      const ticket = event.ticketTypes.find(
-        (t) => t.id === Number(ticketId)
-      );
-      return sum + (ticket?.price || 0) * quantity;
-    },
-    0
-  );
+    setSelectedTickets({});
+  }
+};
+
+
+  const totalSelected = Object.values(selectedTickets).reduce((sum, qty) => sum + qty, 0);
+  const totalPrice = Object.entries(selectedTickets).reduce((sum, [ticketId, quantity]) => {
+    const ticket = event.ticketTypes.find((t) => t.id === ticketId);
+    return sum + (ticket?.price || 0) * quantity;
+  }, 0);
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="p-8">
-        <Link to="/">
-          <Button variant="outline">
-            <ArrowLeft className="size-4 mr-2" />
-            Wróć
-          </Button>
-        </Link>
+      <div className="relative">
+        <div className="h-96 overflow-hidden">
+          <img src={event.image} alt={event.title} className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+        </div>
+        <div className="absolute bottom-0 left-0 right-0 text-white p-8">
+          <div className="container mx-auto">
+            <Link to="/">
+              <Button variant="ghost" className="text-white hover:text-white mb-4">
+                <ArrowLeft className="size-4 mr-2" />
+                Wróć do wydarzeń
+              </Button>
+            </Link>
+            <Badge className="mb-3">{event.category}</Badge>
+            <h1 className="text-5xl mb-4">{event.title}</h1>
+          </div>
+        </div>
       </div>
 
-      <div className="container mx-auto px-4 grid md:grid-cols-3 gap-8">
-        <div className="md:col-span-2 space-y-6">
-          <Card>
-            <CardHeader>
-              <Badge>{event.category}</Badge>
-              <CardTitle className="text-3xl">{event.title}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-3">
-                <Calendar className="size-5 text-blue-600" />
-                {new Date(event.date).toLocaleDateString("pl-PL")}
-              </div>
+      <div className="container mx-auto px-4 py-8">
+        <div className="grid md:grid-cols-3 gap-8">
+          <div className="md:col-span-2 space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Szczegóły wydarzenia</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <Calendar className="size-5 text-blue-600" />
+                  <div>
+                    <p className="text-sm text-gray-600">Data</p>
+                    <p>
+                      {new Date(event.Data).toLocaleDateString('pl-PL', {
+                        weekday: 'long',
+                        month: 'long',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Clock className="size-5 text-blue-600" />
+                  <div>
+                    <p className="text-sm text-gray-600">Czas</p>
+                    <p>{event.Godzina}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <MapPin className="size-5 text-blue-600" />
+                  <div>
+                    <p className="text-sm text-gray-600">Miejsce</p>
+                    <p>{event.Miejsce}</p>
+                    <p className="text-sm text-gray-600">{event.Lokalizacja}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-              <div className="flex items-center gap-3">
-                <MapPin className="size-5 text-blue-600" />
-                {event.location}
-              </div>
+            <Card>
+              <CardHeader>
+                <CardTitle>O tym wydarzeniu</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-700 leading-relaxed">{event.description}</p>
+              </CardContent>
+            </Card>
+          </div>
 
-              <p className="text-gray-700">{event.description}</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div>
-          <Card>
-            <CardHeader>
-              <CardTitle>Wybierz bilety</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {event.ticketTypes.map((ticket) => (
-                <div key={ticket.id} className="border p-4 rounded-lg">
-                  <div className="flex justify-between">
-                    <div>
-                      <p>{ticket.name}</p>
-                      <p className="text-sm text-gray-500">
-                        {ticket.available} dostępne
-                      </p>
+          <div>
+            <Card className="sticky top-24">
+              <CardHeader>
+                <CardTitle>Wybierz bilety</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {event.ticketTypes.map((ticket) => (
+                  <div key={ticket.id} className="border rounded-lg p-4">
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="flex-1">
+                        <p>{ticket.name}</p>
+                        <p className="text-sm text-gray-600">
+                          {ticket.available} Dostępne
+                        </p>
+                        {ticket.description && (
+                          <p className="text-xs text-gray-500 mt-1">{ticket.description}</p>
+                        )}
+                      </div>
+                      <p className="text-lg">{ticket.price} zł</p>
                     </div>
-                    <p>{ticket.price} zł</p>
+                    <div className="flex items-center justify-between mt-3">
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => updateTicketQuantity(ticket.id, -1)}
+                          disabled={!selectedTickets[ticket.id]}
+                        >
+                          <Minus className="size-4" />
+                        </Button>
+                        <span className="w-8 text-center">
+                          {selectedTickets[ticket.id] || 0}
+                        </span>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => updateTicketQuantity(ticket.id, 1)}
+                        >
+                          <Plus className="size-4" />
+                        </Button>
+                      </div>
+                    </div>
                   </div>
+                ))}
 
-                  <div className="flex gap-2 mt-3">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => updateTicketQuantity(ticket.id, -1)}
-                    >
-                      <Minus className="size-4" />
-                    </Button>
-
-                    <span>{selectedTickets[ticket.id] || 0}</span>
-
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => updateTicketQuantity(ticket.id, 1)}
-                    >
-                      <Plus className="size-4" />
-                    </Button>
+                {totalSelected > 0 && (
+                  <div className="border-t pt-4 mt-4 space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Łącznie biletów:</span>
+                      <span>{totalSelected}</span>
+                    </div>
+                    <div className="flex justify-between text-lg">
+                      <span>Łączna cena:</span>
+                      <span>{totalPrice} zł</span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                )}
 
-              {totalSelected > 0 && (
-                <div className="border-t pt-4">
-                  <p>Łącznie: {totalSelected}</p>
-                  <p className="text-lg font-semibold">
-                    {totalPrice} zł
-                  </p>
-                </div>
-              )}
-
-              <Button
-                className="w-full"
-                onClick={handleAddToCart}
-                disabled={totalSelected === 0}
-              >
-                <Check className="size-5 mr-2" />
-                Dodaj do koszyka
-              </Button>
-            </CardContent>
-          </Card>
+                <Button
+                  className="w-full"
+                  size="lg"
+                  onClick={handleAddToCart}
+                  disabled={totalSelected === 0}
+                >
+                  <Check className="size-5 mr-2" />
+                  Dodaj do koszyka
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </div>
   );
 }
-console.log("ID:", id);
-console.log("EVENT:", event);
