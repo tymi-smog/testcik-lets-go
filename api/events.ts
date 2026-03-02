@@ -8,17 +8,17 @@ export default async function handler(req: any, res: any) {
   try {
     const events = await sql`
       SELECT 
-        e.id,
-        e.title,
-        e.description,
-        e.location,
-        e.date,
-        e.ticket_price,
-        e.available_tickets,
-        c.name as category
-      FROM events e
-      LEFT JOIN categories c ON e.category_id = c.id
-      ORDER BY e.date ASC
+        events.id,
+        events.title,
+        events.description,
+        events.location,
+        events.date,
+        events.ticket_price,
+        events.available_tickets,
+        categories.name as category
+      FROM events
+      LEFT JOIN categories ON events.category_id = categories.id
+      ORDER BY events.date ASC
     `;
 
     const ticketTypes = await sql`
