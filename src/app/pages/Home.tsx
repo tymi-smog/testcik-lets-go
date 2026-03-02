@@ -4,6 +4,7 @@ import { Card, CardContent, CardFooter } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Calendar, MapPin, Clock } from 'lucide-react';
+import { events } from '../data/events';
 
 const categories = ['Wszystkie', 'Muzyka', 'Sport', 'Teatr', 'Kabaret', 'Festiwal', 'Konferencja'];
 const categoryLabels: Record<string, string> = {
