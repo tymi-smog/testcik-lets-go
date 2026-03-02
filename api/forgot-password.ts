@@ -49,8 +49,10 @@ await sql`
       subject: "Reset hasła - PanBilecik",
       html: `
         <h2>Reset hasła</h2>
-        <p>Kliknij aby ustawić nowe hasło:</p>
+        <h4>Kliknij aby ustawić nowe hasło:</h4>
         <a href="${link}">${link}</a>
+        <p>Link jest ważny przez 30 minut.</p>
+
       `,
     });
 
