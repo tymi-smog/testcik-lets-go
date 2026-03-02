@@ -37,7 +37,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       UPDATE users
       SET reset_token = ${token},
           reset_expires = ${expires}
-      WHERE user_id = ${user.user_id}
+      WHERE user_id = ${user.id}
     `;
 
     const link = `${process.env.BASE_URL}/reset-password?token=${token}`;
