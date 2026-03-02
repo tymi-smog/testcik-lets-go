@@ -44,7 +44,7 @@ await sql`
     const link = `${process.env.BASE_URL}/reset-password?token=${token}`;
 
     await resend.emails.send({
-      from: "register@strona.panbilecik.eu",
+      from: "register@panbilecik.eu",
       to: email,
       subject: "Reset hasła - PanBilecik",
       html: `
