@@ -33,12 +33,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const token = crypto.randomBytes(32).toString("hex");
     const expires = new Date(Date.now() + 1000 * 60 * 30);
 
-    await sql`
-      UPDATE users
-      SET reset_token = ${token},
-          reset_expires = ${expires}
-      WHERE user_id = ${user.id}
-    `;
+await sql`
+  UPDATE users
+  SET reset_password_token = ${token},
+      reset_password_expires = ${expires}
+  WHERE id = ${user.id}
+`;
 
     const link = `${process.env.BASE_URL}/reset-password?token=${token}`;
 
