@@ -9,19 +9,19 @@ export default async function handler(req: any, res: any) {
 
   try {
     const events = await sql`
-      SELECT 
-        e.id,
-        e.title,
-        e.description,
-        e.location,
-        e.date,
-        e.ticket_price,
-        e.available_tickets,
-        c.name as category
-      FROM events e
-      LEFT JOIN categories c ON e.category_id = c.id
-      WHERE e.id = ${id}
-    `;
+  SELECT 
+    e.id,
+    e.title,
+    e.description,
+    e.location,
+    e.date,
+    e.ticket_price::float as ticket_price,
+    e.available_tickets,
+    c.name as category
+  FROM events e
+  LEFT JOIN categories c ON e.category_id = c.id
+  ORDER BY e.date ASC
+`;
 
     if (events.length === 0) {
       return res.status(404).json({ message: "Not found" });

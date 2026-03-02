@@ -30,6 +30,7 @@ type EventType = {
 
 export function EventDetail() {
   const { id } = useParams();
+  if (!id) return null;
   const { addToCart } = useCart();
 
   const [event, setEvent] = useState<EventType | null>(null);
@@ -37,7 +38,7 @@ export function EventDetail() {
   const [selectedTickets, setSelectedTickets] = useState<Record<number, number>>({});
 
   useEffect(() => {
-    fetch(`/api/events/${id}`)
+    fetch(`/api/events/${Number(id)}`)
       .then((res) => res.json())
       .then((data) => setEvent(data))
       .finally(() => setLoading(false));
@@ -201,3 +202,5 @@ export function EventDetail() {
     </div>
   );
 }
+console.log("ID:", id);
+console.log("EVENT:", event);
