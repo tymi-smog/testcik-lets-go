@@ -54,9 +54,18 @@ export function Register() {
           onChange={(e) => setPassword(e.target.value)}
         />
 
-        <button type="submit" className="bg-black text-white p-2 w-full">
-          Zarejestruj
-        </button>
+<button
+  className="
+    mt-3 w-full
+    bg-black text-white
+    rounded-lg p-2
+    hover:bg-gray-800
+    active:scale-95
+    transition-all duration-200
+  "
+>
+  Zajerestruj
+</button>
       </form>
     </div>
   );
