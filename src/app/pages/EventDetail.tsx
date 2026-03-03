@@ -20,6 +20,8 @@ type ApiEvent = {
   title: string;
   category?: string | null;
   date: string;
+  created_at?: string | null;
+  creator_username?: string | null;
   location?: string | null;
   image_url?: string | null;
   image?: string | null;
@@ -40,6 +42,8 @@ type EventDetailData = {
   title: string;
   category: string;
   date: string;
+  createdAt: string;
+  creatorUsername: string;
   location: string;
   image: string;
   description: string;
@@ -95,6 +99,8 @@ export function EventDetail() {
           title: rawEvent.title,
           category: rawEvent.category || "Inne",
           date: rawEvent.date,
+          createdAt: rawEvent.created_at || rawEvent.date,
+          creatorUsername: rawEvent.creator_username || "Nieznany uzytkownik",
           location: rawEvent.location || "Brak lokalizacji",
           image: rawEvent.image_url || rawEvent.image || fallbackImage,
           description: rawEvent.description || "Brak opisu wydarzenia.",
@@ -235,6 +241,10 @@ export function EventDetail() {
         hour: "2-digit",
         minute: "2-digit",
       });
+  const createdDate = new Date(event.createdAt);
+  const createdLabel = Number.isNaN(createdDate.getTime())
+    ? "brak daty"
+    : createdDate.toLocaleDateString("pl-PL");
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -294,6 +304,9 @@ export function EventDetail() {
                 <CardTitle>O tym wydarzeniu</CardTitle>
               </CardHeader>
               <CardContent>
+                <p className="text-sm text-gray-500 mb-3">
+                  Dodane przez {event.creatorUsername} dnia {createdLabel}
+                </p>
                 <p className="text-gray-700 leading-relaxed">{event.description}</p>
               </CardContent>
             </Card>

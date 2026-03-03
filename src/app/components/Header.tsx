@@ -69,7 +69,7 @@ export function Header() {
               {isLoggedIn && (
                 <>
                   <DropdownMenuItem asChild>
-                    <Link to="/profile">Szczegółly</Link>
+                    <Link to="/profile">Szczegóły</Link>
                   </DropdownMenuItem>
 
                   <DropdownMenuItem asChild>

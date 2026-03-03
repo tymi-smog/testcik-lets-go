@@ -15,6 +15,8 @@ type ApiEvent = {
   title: string;
   category?: string | null;
   date: string;
+  created_at?: string | null;
+  creator_username?: string | null;
   location?: string | null;
   image_url?: string | null;
   image?: string | null;
@@ -27,6 +29,8 @@ type EventsPageEvent = {
   title: string;
   category: string;
   date: string;
+  createdAt: string;
+  creatorUsername: string;
   location: string;
   image: string;
   ticketTypes: ApiTicketType[];
@@ -61,6 +65,8 @@ export function Events() {
           title: event.title,
           category: event.category || 'Inne',
           date: event.date,
+          createdAt: event.created_at || event.date,
+          creatorUsername: event.creator_username || 'Nieznany uzytkownik',
           location: event.location || 'Brak lokalizacji',
           image: event.image_url || event.image || fallbackImage,
           ticketTypes: event.ticketTypes || [],
@@ -151,6 +157,7 @@ export function Events() {
                 : event.ticketPrice;
 
               const eventDate = new Date(event.date);
+              const createdDate = new Date(event.createdAt);
               const timeLabel = Number.isNaN(eventDate.getTime())
                 ? 'Brak godziny'
                 : eventDate.toLocaleTimeString('pl-PL', {
@@ -173,6 +180,12 @@ export function Events() {
                       <span className="text-sm text-gray-600">Od {minTicketPrice ?? 0} zł</span>
                     </div>
                     <h3 className="text-xl mb-3">{event.title}</h3>
+                    <p className="text-xs text-gray-500 mb-3">
+                      Dodane przez {event.creatorUsername} dnia{" "}
+                      {Number.isNaN(createdDate.getTime())
+                        ? "brak daty"
+                        : createdDate.toLocaleDateString("pl-PL")}
+                    </p>
                     <div className="space-y-2 text-sm text-gray-600">
                       <div className="flex items-center gap-2">
                         <Calendar className="size-4" />
