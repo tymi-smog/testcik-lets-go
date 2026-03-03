@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { sql } from "./lib/db.js";
 import { resend } from "./lib/resend.js";
+import { authenticateRequest } from "./lib/auth.js";
 
 type CheckoutItem = {
   eventId: string;
@@ -14,7 +15,7 @@ type CheckoutItem = {
 type CheckoutBody = {
   firstName: string;
   lastName: string;
-  email: string;
+  email?: string;
   items: CheckoutItem[];
 };
 
@@ -23,8 +24,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
+  const authUser = await authenticateRequest(req);
+  if (!authUser) {
+    return res.status(401).json({ error: "Musisz być zalogowany." });
+  }
+
+  if (!authUser.is_verified) {
+    return res.status(403).json({ error: "Konto musi być zweryfikowane przed zakupem." });
+  }
+
   const body = (typeof req.body === "string" ? JSON.parse(req.body) : req.body) as CheckoutBody;
-  const { firstName, lastName, email, items } = body || {};
+  const { firstName, lastName, items } = body || {};
+  const email = authUser.email;
 
   if (!firstName || !lastName || !email || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: "Missing required checkout data" });

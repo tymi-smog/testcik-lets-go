@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { useCart } from "../context/CartContext";
 import { Button } from "../components/ui/button";
@@ -8,14 +8,15 @@ import { Label } from "../components/ui/label";
 import { Separator } from "../components/ui/separator";
 import { Trash2, ShoppingCart, CreditCard } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "../../context/AuthContext";
 
 export function Checkout() {
   const { items, removeFromCart, updateQuantity, getTotal, clearCart } = useCart();
+  const { user, token, isLoading } = useAuth();
   const navigate = useNavigate();
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
   const [cardNumber, setCardNumber] = useState("");
   const [expiry, setExpiry] = useState("");
   const [cvv, setCvv] = useState("");
@@ -23,6 +24,21 @@ export function Checkout() {
 
   const serviceFee = Number((getTotal() * 0.05).toFixed(2));
   const grandTotal = Number((getTotal() + serviceFee).toFixed(2));
+
+  useEffect(() => {
+    if (isLoading) return;
+
+    if (!user) {
+      toast.error("Musisz byc zalogowany, aby kupic bilety.");
+      navigate("/login");
+      return;
+    }
+
+    if (!user.is_verified) {
+      toast.error("Zweryfikuj konto e-mail, aby kupowac bilety.");
+      navigate("/");
+    }
+  }, [isLoading, user, navigate]);
 
   const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,16 +48,30 @@ export function Checkout() {
       return;
     }
 
+    if (!token) {
+      toast.error("Brak sesji. Zaloguj sie ponownie.");
+      navigate("/login");
+      return;
+    }
+
+    if (!user?.is_verified) {
+      toast.error("Konto musi byc zweryfikowane.");
+      return;
+    }
+
     try {
       setIsProcessing(true);
 
       const response = await fetch("/api/checkout", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           firstName,
           lastName,
-          email,
+          email: user.email,
           cardNumber,
           expiry,
           cvv,
@@ -52,28 +82,52 @@ export function Checkout() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result?.error || "Nie udało się zrealizować płatności.");
+        throw new Error(result?.error || "Nie udalo sie zrealizowac platnosci.");
       }
 
-      toast.success("Zakup zakończony. Potwierdzenie wysłaliśmy na e-mail.");
+      toast.success("Zakup zakonczony. Potwierdzenie wyslalismy na e-mail.");
       clearCart();
       navigate("/");
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Wystąpił nieznany błąd.";
+      const message = error instanceof Error ? error.message : "Wystapil nieznany blad.";
       toast.error(message);
     } finally {
       setIsProcessing(false);
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <p className="text-gray-600">Ladowanie sesji...</p>
+      </div>
+    );
+  }
+
+  if (!user || !user.is_verified) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl mb-2">Zakup niedostepny</h2>
+          <p className="text-gray-600 mb-6">
+            Tylko zalogowani i zweryfikowani uzytkownicy moga kupowac bilety.
+          </p>
+          <Button onClick={() => navigate(user ? "/" : "/login")}>
+            {user ? "Wroc na strone glowna" : "Przejdz do logowania"}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   if (items.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <ShoppingCart className="size-16 mx-auto text-gray-400 mb-4" />
-          <h2 className="text-2xl mb-2">Twój koszyk jest pusty</h2>
-          <p className="text-gray-600 mb-6">Przeglądaj wydarzenia i dodaj bilety do koszyka</p>
-          <Button onClick={() => navigate("/events")}>Przeglądaj wydarzenia</Button>
+          <h2 className="text-2xl mb-2">Twoj koszyk jest pusty</h2>
+          <p className="text-gray-600 mb-6">Przegladaj wydarzenia i dodaj bilety do koszyka</p>
+          <Button onClick={() => navigate("/events")}>Przegladaj wydarzenia</Button>
         </div>
       </div>
     );
@@ -99,7 +153,7 @@ export function Checkout() {
                     <div className="flex-1">
                       <h3 className="mb-1">{item.eventTitle}</h3>
                       <p className="text-sm text-gray-600">{item.ticketTypeName}</p>
-                      <p className="text-sm">{item.price} zł za sztukę</p>
+                      <p className="text-sm">{item.price} zl za sztuke</p>
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="flex items-center gap-2 border rounded px-2">
@@ -121,7 +175,7 @@ export function Checkout() {
                           +
                         </button>
                       </div>
-                      <p className="w-24 text-right">{(item.price * item.quantity).toFixed(2)} zł</p>
+                      <p className="w-24 text-right">{(item.price * item.quantity).toFixed(2)} zl</p>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -137,13 +191,13 @@ export function Checkout() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Informacje o płatności</CardTitle>
+                <CardTitle>Informacje o platnosci</CardTitle>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleCheckout} className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="firstName">Imię</Label>
+                      <Label htmlFor="firstName">Imie</Label>
                       <Input
                         id="firstName"
                         value={firstName}
@@ -163,14 +217,8 @@ export function Checkout() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                    />
+                    <Label htmlFor="email">Email konta</Label>
+                    <Input id="email" type="email" value={user.email} readOnly />
                   </div>
 
                   <Separator />
@@ -189,7 +237,7 @@ export function Checkout() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="expiry">Data ważności</Label>
+                      <Label htmlFor="expiry">Data waznosci</Label>
                       <Input
                         id="expiry"
                         placeholder="MM/YY"
@@ -213,7 +261,7 @@ export function Checkout() {
 
                   <Button type="submit" className="w-full" size="lg" disabled={isProcessing}>
                     <CreditCard className="size-5 mr-2" />
-                    {isProcessing ? "Przetwarzanie..." : `Zapłać ${grandTotal.toFixed(2)} zł`}
+                    {isProcessing ? "Przetwarzanie..." : `Zaplac ${grandTotal.toFixed(2)} zl`}
                   </Button>
                 </form>
               </CardContent>
@@ -223,7 +271,7 @@ export function Checkout() {
           <div>
             <Card className="sticky top-24">
               <CardHeader>
-                <CardTitle>Podsumowanie zamówienia</CardTitle>
+                <CardTitle>Podsumowanie zamowienia</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
@@ -235,7 +283,7 @@ export function Checkout() {
                       <span className="text-gray-600">
                         {item.quantity}x {item.ticketTypeName}
                       </span>
-                      <span>{(item.price * item.quantity).toFixed(2)} zł</span>
+                      <span>{(item.price * item.quantity).toFixed(2)} zl</span>
                     </div>
                   ))}
                 </div>
@@ -244,20 +292,20 @@ export function Checkout() {
 
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Suma biletów</span>
-                    <span>{getTotal().toFixed(2)} zł</span>
+                    <span className="text-gray-600">Suma biletow</span>
+                    <span>{getTotal().toFixed(2)} zl</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Opłata serwisowa</span>
-                    <span>{serviceFee.toFixed(2)} zł</span>
+                    <span className="text-gray-600">Oplata serwisowa</span>
+                    <span>{serviceFee.toFixed(2)} zl</span>
                   </div>
                 </div>
 
                 <Separator />
 
                 <div className="flex justify-between text-lg">
-                  <span>Łącznie</span>
-                  <span>{grandTotal.toFixed(2)} zł</span>
+                  <span>Lacznie</span>
+                  <span>{grandTotal.toFixed(2)} zl</span>
                 </div>
               </CardContent>
             </Card>
@@ -267,4 +315,3 @@ export function Checkout() {
     </div>
   );
 }
-

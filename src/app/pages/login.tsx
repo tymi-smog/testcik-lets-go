@@ -1,7 +1,11 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 
 export function Login() {
+  const navigate = useNavigate();
+  const { login } = useAuth();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -23,23 +27,26 @@ export function Login() {
       });
 
       const data = await res.json();
-      console.log("LOGIN RESPONSE:", data);
-
       if (!res.ok) {
-        alert(data.error || "Błąd logowania");
+        alert(data.error || "Blad logowania");
         setLoading(false);
         return;
       }
 
-      localStorage.setItem("token", data.token);
+      if (!data?.token || !data?.user) {
+        alert("Nieprawidlowy format odpowiedzi logowania");
+        setLoading(false);
+        return;
+      }
 
-      window.location.href = "/";
+      login(data.token, data.user);
+      navigate("/");
     } catch (err) {
       console.error(err);
-      alert("Coś poszło nie tak");
+      alert("Cos poszlo nie tak");
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (
@@ -61,7 +68,7 @@ export function Login() {
 
         <input
           type="password"
-          placeholder="Hasło"
+          placeholder="Haslo"
           className="w-full border rounded-lg p-2"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -73,17 +80,16 @@ export function Login() {
           disabled={loading}
           className="w-full bg-black text-white rounded-lg p-2 hover:bg-gray-800 transition"
         >
-          {loading ? "Logowanie..." : "Zaloguj się"}
+          {loading ? "Logowanie..." : "Zaloguj sie"}
         </button>
 
-        {/*  LINKI AUTH */}
         <div className="flex justify-between text-sm mt-3 text-gray-500">
           <Link to="/forgot-password" className="hover:underline">
-            Zapomniałeś hasła?
+            Zapomniales hasla?
           </Link>
 
           <Link to="/register" className="underline">
-            Zarejestruj się
+            Zarejestruj sie
           </Link>
         </div>
       </form>
