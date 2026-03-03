@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 
 type User = {
-  user_id: number;
+  userId: number;
   username: string;
   email: string;
   pending_email?: string | null;
@@ -21,20 +21,6 @@ export function Profile() {
   const [loadingEmail, setLoadingEmail] = useState(false);
 
   const navigate = useNavigate();
-
-  useEffect(() => {
-    const storedToken = token ?? localStorage.getItem("token");
-    if (!storedToken) return;
-
-    try {
-      const payload = JSON.parse(atob(storedToken.split(".")[1]));
-      setUser(payload);
-      setUsername(payload.username);
-      setEmail(payload.email);
-    } catch {
-      console.error("JWT decode error");
-    }
-  }, [token]);
 
   async function refreshUser(storedToken: string) {
     const response = await fetch("/api/me", {
@@ -55,6 +41,20 @@ export function Profile() {
       login(storedToken, data.user);
     }
   }
+
+  useEffect(() => {
+    const storedToken = token ?? localStorage.getItem("token");
+    if (!storedToken) {
+      setUser(null);
+      setUsername("");
+      setEmail("");
+      return;
+    }
+
+    refreshUser(storedToken).catch(() => {
+      console.error("Nie udalo sie pobrac danych profilu");
+    });
+  }, [token]);
 
   async function updateUsername() {
     const storedToken = token ?? localStorage.getItem("token");
