@@ -76,7 +76,7 @@ export function EventDetail() {
 
         const response = await fetch("/api/events");
         if (!response.ok) {
-          throw new Error(`Nie uda\u0142o si\u0119 pobra\u0107 wydarze\u0144 (${response.status})`);
+          throw new Error(`Nie udało się pobrać wydarzeń (${response.status})`);
         }
 
         const events = (await response.json()) as ApiEvent[];
@@ -111,7 +111,7 @@ export function EventDetail() {
         }
       } catch (err) {
         if (mounted) {
-          setError(err instanceof Error ? err.message : "Wyst\u0105pi\u0142 nieznany b\u0142\u0105d");
+          setError(err instanceof Error ? err.message : "Wystąpił nieznany błąd");
           setEvent(null);
         }
       } finally {
@@ -169,7 +169,7 @@ export function EventDetail() {
 
     if (itemsAdded > 0) {
       if (itemsAdded > 4) {
-        toast.success(`Dodano ${itemsAdded} bilet\u00f3w do koszyka!`);
+        toast.success(`Dodano ${itemsAdded} biletów do koszyka!`);
       } else if (itemsAdded > 1) {
         toast.success(`Dodano ${itemsAdded} bilety do koszyka!`);
       } else {
@@ -182,7 +182,7 @@ export function EventDetail() {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-500 text-lg">\u0141adowanie wydarzenia...</p>
+        <p className="text-gray-500 text-lg">Ładowanie wydarzenia...</p>
       </div>
     );
   }
@@ -193,7 +193,7 @@ export function EventDetail() {
         <div className="text-center">
           <p className="text-xl mb-4 text-red-600">{error}</p>
           <Link to="/">
-            <Button>Wr\u00f3\u0107 do wydarze\u0144</Button>
+            <Button>Wróć do wydarzeń</Button>
           </Link>
         </div>
       </div>
@@ -206,7 +206,7 @@ export function EventDetail() {
         <div className="text-center">
           <p className="text-xl mb-4">Wydarzenie nie znalezione</p>
           <Link to="/">
-            <Button>Wr\u00f3\u0107 do wydarze\u0144</Button>
+            <Button>Wróć do wydarzeń</Button>
           </Link>
         </div>
       </div>
@@ -247,7 +247,7 @@ export function EventDetail() {
             <Link to="/">
               <Button variant="ghost" className="text-white hover:text-white mb-4">
                 <ArrowLeft className="size-4 mr-2" />
-                Wr\u00f3\u0107 do wydarze\u0144
+                Wróć do wydarzeń
               </Button>
             </Link>
             <Badge className="mb-3">{event.category}</Badge>
@@ -261,7 +261,7 @@ export function EventDetail() {
           <div className="md:col-span-2 space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Szczeg\u00f3\u0142y wydarzenia</CardTitle>
+                <CardTitle>Szczegóły wydarzenia</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center gap-3">
@@ -309,12 +309,12 @@ export function EventDetail() {
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex-1">
                         <p>{ticket.name}</p>
-                        <p className="text-sm text-gray-600">{ticket.available} Dost\u0119pne</p>
+                        <p className="text-sm text-gray-600">{ticket.available} Dostępne</p>
                         {ticket.description && (
                           <p className="text-xs text-gray-500 mt-1">{ticket.description}</p>
                         )}
                       </div>
-                      <p className="text-lg">{ticket.price} z\u0142</p>
+                      <p className="text-lg">{ticket.price} zł</p>
                     </div>
                     <div className="flex items-center justify-between mt-3">
                       <div className="flex items-center gap-2">
@@ -343,12 +343,12 @@ export function EventDetail() {
                 {totalSelected > 0 && (
                   <div className="border-t pt-4 mt-4 space-y-2">
                     <div className="flex justify-between">
-                      <span className="text-gray-600">\u0141\u0105cznie bilet\u00f3w:</span>
+                      <span className="text-gray-600">Łącznie biletów:</span>
                       <span>{totalSelected}</span>
                     </div>
                     <div className="flex justify-between text-lg">
-                      <span>\u0141\u0105czna cena:</span>
-                      <span>{totalPrice} z\u0142</span>
+                      <span>Łączna cena:</span>
+                      <span>{totalPrice} zł</span>
                     </div>
                   </div>
                 )}
@@ -365,3 +365,4 @@ export function EventDetail() {
     </div>
   );
 }
+

@@ -52,14 +52,14 @@ export function Checkout() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result?.error || "Nie uda\u0142o si\u0119 zrealizowa\u0107 p\u0142atno\u015bci.");
+        throw new Error(result?.error || "Nie udało się zrealizować płatności.");
       }
 
-      toast.success("Zakup zako\u0144czony. Potwierdzenie wys\u0142ali\u015bmy na e-mail.");
+      toast.success("Zakup zakończony. Potwierdzenie wysłaliśmy na e-mail.");
       clearCart();
       navigate("/");
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Wyst\u0105pi\u0142 nieznany b\u0142\u0105d.";
+      const message = error instanceof Error ? error.message : "Wystąpił nieznany błąd.";
       toast.error(message);
     } finally {
       setIsProcessing(false);
@@ -71,9 +71,9 @@ export function Checkout() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <ShoppingCart className="size-16 mx-auto text-gray-400 mb-4" />
-          <h2 className="text-2xl mb-2">Tw\u00f3j koszyk jest pusty</h2>
-          <p className="text-gray-600 mb-6">Przegl\u0105daj wydarzenia i dodaj bilety do koszyka</p>
-          <Button onClick={() => navigate("/events")}>Przegl\u0105daj wydarzenia</Button>
+          <h2 className="text-2xl mb-2">Twój koszyk jest pusty</h2>
+          <p className="text-gray-600 mb-6">Przeglądaj wydarzenia i dodaj bilety do koszyka</p>
+          <Button onClick={() => navigate("/events")}>Przeglądaj wydarzenia</Button>
         </div>
       </div>
     );
@@ -99,7 +99,7 @@ export function Checkout() {
                     <div className="flex-1">
                       <h3 className="mb-1">{item.eventTitle}</h3>
                       <p className="text-sm text-gray-600">{item.ticketTypeName}</p>
-                      <p className="text-sm">{item.price} z\u0142 za sztuk\u0119</p>
+                      <p className="text-sm">{item.price} zł za sztukę</p>
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="flex items-center gap-2 border rounded px-2">
@@ -121,7 +121,7 @@ export function Checkout() {
                           +
                         </button>
                       </div>
-                      <p className="w-24 text-right">{(item.price * item.quantity).toFixed(2)} z\u0142</p>
+                      <p className="w-24 text-right">{(item.price * item.quantity).toFixed(2)} zł</p>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -137,13 +137,13 @@ export function Checkout() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Informacje o p\u0142atno\u015bci</CardTitle>
+                <CardTitle>Informacje o płatności</CardTitle>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleCheckout} className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="firstName">Imi\u0119</Label>
+                      <Label htmlFor="firstName">Imię</Label>
                       <Input
                         id="firstName"
                         value={firstName}
@@ -189,7 +189,7 @@ export function Checkout() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="expiry">Data wa\u017cno\u015bci</Label>
+                      <Label htmlFor="expiry">Data ważności</Label>
                       <Input
                         id="expiry"
                         placeholder="MM/YY"
@@ -213,7 +213,7 @@ export function Checkout() {
 
                   <Button type="submit" className="w-full" size="lg" disabled={isProcessing}>
                     <CreditCard className="size-5 mr-2" />
-                    {isProcessing ? "Przetwarzanie..." : `Zap\u0142a\u0107 ${grandTotal.toFixed(2)} z\u0142`}
+                    {isProcessing ? "Przetwarzanie..." : `Zapłać ${grandTotal.toFixed(2)} zł`}
                   </Button>
                 </form>
               </CardContent>
@@ -223,7 +223,7 @@ export function Checkout() {
           <div>
             <Card className="sticky top-24">
               <CardHeader>
-                <CardTitle>Podsumowanie zam\u00f3wienia</CardTitle>
+                <CardTitle>Podsumowanie zamówienia</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
@@ -235,7 +235,7 @@ export function Checkout() {
                       <span className="text-gray-600">
                         {item.quantity}x {item.ticketTypeName}
                       </span>
-                      <span>{(item.price * item.quantity).toFixed(2)} z\u0142</span>
+                      <span>{(item.price * item.quantity).toFixed(2)} zł</span>
                     </div>
                   ))}
                 </div>
@@ -244,20 +244,20 @@ export function Checkout() {
 
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Suma bilet\u00f3w</span>
-                    <span>{getTotal().toFixed(2)} z\u0142</span>
+                    <span className="text-gray-600">Suma biletów</span>
+                    <span>{getTotal().toFixed(2)} zł</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Op\u0142ata serwisowa</span>
-                    <span>{serviceFee.toFixed(2)} z\u0142</span>
+                    <span className="text-gray-600">Opłata serwisowa</span>
+                    <span>{serviceFee.toFixed(2)} zł</span>
                   </div>
                 </div>
 
                 <Separator />
 
                 <div className="flex justify-between text-lg">
-                  <span>\u0141\u0105cznie</span>
-                  <span>{grandTotal.toFixed(2)} z\u0142</span>
+                  <span>Łącznie</span>
+                  <span>{grandTotal.toFixed(2)} zł</span>
                 </div>
               </CardContent>
             </Card>
@@ -267,3 +267,4 @@ export function Checkout() {
     </div>
   );
 }
+
