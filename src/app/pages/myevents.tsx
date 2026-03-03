@@ -5,6 +5,7 @@ import { useAuth } from "../../context/AuthContext";
 type MyEvent = {
   id: string | number;
   title: string;
+  category?: string | null;
   description?: string | null;
   date: string;
   location?: string | null;
@@ -18,6 +19,8 @@ type MyEvent = {
     name: string;
     price: number | string;
     available: number | string;
+    sold?: number | string | null;
+    initial_available?: number | string | null;
     description?: string | null;
   }>;
 };
@@ -31,6 +34,46 @@ type TicketDraft = {
 
 const fallbackImage =
   "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?auto=format&fit=crop&w=1200&q=80";
+
+type SortOption =
+  | "priceAsc"
+  | "priceDesc"
+  | "typeAsc"
+  | "availableAsc"
+  | "availableDesc"
+  | "soldAsc"
+  | "soldDesc"
+  | "dateAsc"
+  | "dateDesc";
+
+function getMyEventStats(event: MyEvent) {
+  const tickets = event.ticketTypes ?? [];
+  const minTicketPrice = tickets.length
+    ? Math.min(...tickets.map((ticket) => Number(ticket.price)))
+    : 0;
+  const totalTicketsCount = tickets.reduce((sum, ticket) => {
+    const available = Number(ticket.available ?? 0);
+    return sum + (Number.isFinite(available) ? available : 0);
+  }, 0);
+  const totalSoldCount = tickets.reduce((sum, ticket) => {
+    const sold = Number(ticket.sold);
+    if (Number.isFinite(sold) && sold >= 0) {
+      return sum + sold;
+    }
+    const initialAvailable = Number(ticket.initial_available);
+    const available = Number(ticket.available ?? 0);
+    if (Number.isFinite(initialAvailable) && Number.isFinite(available)) {
+      return sum + Math.max(initialAvailable - available, 0);
+    }
+    return sum;
+  }, 0);
+
+  return {
+    minTicketPrice: Number.isFinite(minTicketPrice) ? minTicketPrice : 0,
+    totalTicketsCount,
+    totalSoldCount,
+  };
+}
 
 export function MyEvents() {
   const { token, user, isLoading } = useAuth();
@@ -48,6 +91,15 @@ export function MyEvents() {
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [events, setEvents] = useState<MyEvent[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
+  const [sortBy, setSortBy] = useState<SortOption>("dateDesc");
+  const [priceFrom, setPriceFrom] = useState("");
+  const [priceTo, setPriceTo] = useState("");
+  const [availableFrom, setAvailableFrom] = useState("");
+  const [availableTo, setAvailableTo] = useState("");
+  const [soldFrom, setSoldFrom] = useState("");
+  const [soldTo, setSoldTo] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("Wszystkie");
+  const [locationFilter, setLocationFilter] = useState("Wszystkie");
 
   async function loadMyEvents(currentUserId?: number) {
     if (!currentUserId) {
@@ -84,6 +136,108 @@ export function MyEvents() {
   useEffect(() => {
     loadMyEvents(user?.userId);
   }, [user?.userId, user?.is_admin]);
+
+  const categories = useMemo(() => {
+    const unique = [...new Set(events.map((event) => event.category || "Inne"))];
+    return ["Wszystkie", ...unique];
+  }, [events]);
+
+  const locations = useMemo(() => {
+    const unique = [
+      ...new Set(events.map((event) => event.location || "Brak lokalizacji").filter(Boolean)),
+    ];
+    return ["Wszystkie", ...unique];
+  }, [events]);
+
+  useEffect(() => {
+    if (!categories.includes(categoryFilter)) {
+      setCategoryFilter("Wszystkie");
+    }
+  }, [categories, categoryFilter]);
+
+  useEffect(() => {
+    if (!locations.includes(locationFilter)) {
+      setLocationFilter("Wszystkie");
+    }
+  }, [locations, locationFilter]);
+
+  const processedEvents = useMemo(() => {
+    const priceFromNumber = priceFrom === "" ? null : Number(priceFrom);
+    const priceToNumber = priceTo === "" ? null : Number(priceTo);
+    const availableFromNumber = availableFrom === "" ? null : Number(availableFrom);
+    const availableToNumber = availableTo === "" ? null : Number(availableTo);
+    const soldFromNumber = soldFrom === "" ? null : Number(soldFrom);
+    const soldToNumber = soldTo === "" ? null : Number(soldTo);
+
+    const filtered = events.filter((event) => {
+      const stats = getMyEventStats(event);
+      const category = event.category || "Inne";
+      const location = event.location || "Brak lokalizacji";
+      const matchesCategory = categoryFilter === "Wszystkie" || category === categoryFilter;
+      const matchesLocation = locationFilter === "Wszystkie" || location === locationFilter;
+      const matchesPriceFrom = priceFromNumber === null || stats.minTicketPrice >= priceFromNumber;
+      const matchesPriceTo = priceToNumber === null || stats.minTicketPrice <= priceToNumber;
+      const matchesAvailableFrom =
+        availableFromNumber === null || stats.totalTicketsCount >= availableFromNumber;
+      const matchesAvailableTo =
+        availableToNumber === null || stats.totalTicketsCount <= availableToNumber;
+      const matchesSoldFrom = soldFromNumber === null || stats.totalSoldCount >= soldFromNumber;
+      const matchesSoldTo = soldToNumber === null || stats.totalSoldCount <= soldToNumber;
+
+      return (
+        matchesCategory &&
+        matchesLocation &&
+        matchesPriceFrom &&
+        matchesPriceTo &&
+        matchesAvailableFrom &&
+        matchesAvailableTo &&
+        matchesSoldFrom &&
+        matchesSoldTo
+      );
+    });
+
+    return [...filtered].sort((a, b) => {
+      const aStats = getMyEventStats(a);
+      const bStats = getMyEventStats(b);
+      const aDate = Date.parse(a.date);
+      const bDate = Date.parse(b.date);
+      const aCategory = a.category || "Inne";
+      const bCategory = b.category || "Inne";
+
+      switch (sortBy) {
+        case "priceAsc":
+          return aStats.minTicketPrice - bStats.minTicketPrice;
+        case "priceDesc":
+          return bStats.minTicketPrice - aStats.minTicketPrice;
+        case "typeAsc":
+          return aCategory.localeCompare(bCategory, "pl");
+        case "availableAsc":
+          return aStats.totalTicketsCount - bStats.totalTicketsCount;
+        case "availableDesc":
+          return bStats.totalTicketsCount - aStats.totalTicketsCount;
+        case "soldAsc":
+          return aStats.totalSoldCount - bStats.totalSoldCount;
+        case "soldDesc":
+          return bStats.totalSoldCount - aStats.totalSoldCount;
+        case "dateAsc":
+          return (Number.isNaN(aDate) ? 0 : aDate) - (Number.isNaN(bDate) ? 0 : bDate);
+        case "dateDesc":
+        default:
+          return (Number.isNaN(bDate) ? 0 : bDate) - (Number.isNaN(aDate) ? 0 : aDate);
+      }
+    });
+  }, [
+    events,
+    sortBy,
+    categoryFilter,
+    locationFilter,
+    priceFrom,
+    priceTo,
+    availableFrom,
+    availableTo,
+    soldFrom,
+    soldTo,
+  ]);
 
   const hasValidTickets = useMemo(
     () =>
@@ -389,23 +543,132 @@ export function MyEvents() {
 
       <section className="space-y-4">
         <h2 className="text-lg font-medium">Twoje dodane wydarzenia</h2>
+        <div className="rounded-lg border bg-white p-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortOption)}
+              className="border rounded-md px-3 py-2"
+            >
+              <option value="dateDesc">Data: od najnowszych</option>
+              <option value="dateAsc">Data: od najstarszych</option>
+              <option value="priceAsc">Cena biletu: rosnaco</option>
+              <option value="priceDesc">Cena biletu: malejaco</option>
+              <option value="typeAsc">Rodzaj: alfabetycznie</option>
+              <option value="availableAsc">Dostepne bilety: rosnaco</option>
+              <option value="availableDesc">Dostepne bilety: malejaco</option>
+              <option value="soldAsc">Sprzedane bilety: rosnaco</option>
+              <option value="soldDesc">Sprzedane bilety: malejaco</option>
+            </select>
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="border rounded-md px-3 py-2"
+            >
+              {categories.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
+            <select
+              value={locationFilter}
+              onChange={(e) => setLocationFilter(e.target.value)}
+              className="border rounded-md px-3 py-2"
+            >
+              {locations.map((location) => (
+                <option key={location} value={location}>
+                  {location}
+                </option>
+              ))}
+            </select>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="Cena od"
+              value={priceFrom}
+              onChange={(e) => setPriceFrom(e.target.value)}
+              className="border rounded-md px-3 py-2"
+            />
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="Cena do"
+              value={priceTo}
+              onChange={(e) => setPriceTo(e.target.value)}
+              className="border rounded-md px-3 py-2"
+            />
+            <input
+              type="number"
+              min="0"
+              step="1"
+              placeholder="Dostepne bilety od"
+              value={availableFrom}
+              onChange={(e) => setAvailableFrom(e.target.value)}
+              className="border rounded-md px-3 py-2"
+            />
+            <input
+              type="number"
+              min="0"
+              step="1"
+              placeholder="Dostepne bilety do"
+              value={availableTo}
+              onChange={(e) => setAvailableTo(e.target.value)}
+              className="border rounded-md px-3 py-2"
+            />
+            <input
+              type="number"
+              min="0"
+              step="1"
+              placeholder="Sprzedane bilety od"
+              value={soldFrom}
+              onChange={(e) => setSoldFrom(e.target.value)}
+              className="border rounded-md px-3 py-2"
+            />
+            <input
+              type="number"
+              min="0"
+              step="1"
+              placeholder="Sprzedane bilety do"
+              value={soldTo}
+              onChange={(e) => setSoldTo(e.target.value)}
+              className="border rounded-md px-3 py-2"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                setSortBy("dateDesc");
+                setCategoryFilter("Wszystkie");
+                setLocationFilter("Wszystkie");
+                setPriceFrom("");
+                setPriceTo("");
+                setAvailableFrom("");
+                setAvailableTo("");
+                setSoldFrom("");
+                setSoldTo("");
+              }}
+              className="rounded-md border px-3 py-2 text-sm hover:bg-gray-100"
+            >
+              Wyczysc filtry
+            </button>
+          </div>
+        </div>
 
         {loadingEvents && <p className="text-gray-500">Ladowanie wydarzen...</p>}
 
         {!loadingEvents && events.length === 0 && (
           <div className="border rounded-lg p-6 text-gray-500">Nie dodales jeszcze zadnego wydarzenia.</div>
         )}
+        {!loadingEvents && events.length > 0 && processedEvents.length === 0 && (
+          <div className="border rounded-lg p-6 text-gray-500">Brak wydarzen dla wybranych filtrow.</div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {!loadingEvents &&
-            events.map((event) => {
-              const minTicketPrice = event.ticketTypes?.length
-                ? Math.min(...event.ticketTypes.map((ticket) => Number(ticket.price)))
-                : 0;
-              const totalTicketsCount = (event.ticketTypes ?? []).reduce((sum, ticket) => {
-                const available = Number(ticket.available ?? 0);
-                return sum + (Number.isFinite(available) ? available : 0);
-              }, 0);
+            processedEvents.map((event) => {
+              const { minTicketPrice, totalTicketsCount, totalSoldCount } = getMyEventStats(event);
               const createdAt = new Date(event.created_at || event.date || "");
               const createdLabel = Number.isNaN(createdAt.getTime())
                 ? "Brak daty"
@@ -424,8 +687,9 @@ export function MyEvents() {
                   />
                   <div className="p-4 space-y-2">
                     <h3 className="font-medium text-lg">{event.title}</h3>
+                    <p className="text-sm text-gray-600">{event.category || "Inne"}</p>
                     <p className="text-sm text-gray-600">
-                      Od {minTicketPrice} zł | Łącznie biletów: {totalTicketsCount}
+                      Od {minTicketPrice} zł | Łącznie biletów: {totalTicketsCount} | Sprzedane: {totalSoldCount}
                     </p>
                     <p className="text-sm text-gray-600">{event.location || "Brak lokalizacji"}</p>
                     {user.is_admin && (

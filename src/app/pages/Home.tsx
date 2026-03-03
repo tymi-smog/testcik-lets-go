@@ -133,8 +133,8 @@ export function Home() {
     <div className="min-h-screen bg-gray-50">
       <div className="bg-[#041f14] text-white py-16">
         <div className="container mx-auto px-4">
-          <h1 className="text-5xl mb-4">Najnowsze wydarzenia</h1>
-          <p className="text-xl opacity-90">Zobacz 10 ostatnio dodanych wydarzeń.</p>
+          <h1 className="text-5xl mb-4">Ostatnio dodane wydarzenia</h1>
+          <p className="text-xl opacity-90"></p>
           <div className="mt-6">
             <Link to="/events">
               <Button variant="secondary">Przeglądaj wszystkie wydarzenia</Button>

@@ -7,8 +7,11 @@ import { Calendar, Clock, MapPin } from 'lucide-react';
 
 type ApiTicketType = {
   id: string | number;
+  name?: string;
   price: number | string;
   available?: number | string;
+  sold?: number | string | null;
+  initial_available?: number | string | null;
 };
 
 type ApiEvent = {
@@ -41,11 +44,60 @@ type EventsPageEvent = {
 const fallbackImage =
   'https://images.unsplash.com/photo-1523580494863-6f3031224c94?auto=format&fit=crop&w=1080&q=80';
 
+type SortOption =
+  | 'priceAsc'
+  | 'priceDesc'
+  | 'typeAsc'
+  | 'availableAsc'
+  | 'availableDesc'
+  | 'soldAsc'
+  | 'soldDesc'
+  | 'dateAsc'
+  | 'dateDesc';
+
+function getEventStats(event: EventsPageEvent) {
+  const minTicketPrice = event.ticketTypes.length
+    ? Math.min(...event.ticketTypes.map((ticket) => Number(ticket.price)))
+    : event.ticketPrice ?? 0;
+
+  const totalTicketsCount = event.ticketTypes.reduce((sum, ticket) => {
+    const available = Number(ticket.available ?? 0);
+    return sum + (Number.isFinite(available) ? available : 0);
+  }, 0);
+
+  const totalSoldCount = event.ticketTypes.reduce((sum, ticket) => {
+    const sold = Number(ticket.sold);
+    if (Number.isFinite(sold) && sold >= 0) {
+      return sum + sold;
+    }
+    const initialAvailable = Number(ticket.initial_available);
+    const available = Number(ticket.available ?? 0);
+    if (Number.isFinite(initialAvailable) && Number.isFinite(available)) {
+      return sum + Math.max(initialAvailable - available, 0);
+    }
+    return sum;
+  }, 0);
+
+  return {
+    minTicketPrice: Number.isFinite(minTicketPrice) ? minTicketPrice : 0,
+    totalTicketsCount,
+    totalSoldCount,
+  };
+}
+
 export function Events() {
-  const [selectedCategory, setSelectedCategory] = useState('Wszystkie');
   const [events, setEvents] = useState<EventsPageEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<SortOption>('dateDesc');
+  const [priceFrom, setPriceFrom] = useState('');
+  const [priceTo, setPriceTo] = useState('');
+  const [availableFrom, setAvailableFrom] = useState('');
+  const [availableTo, setAvailableTo] = useState('');
+  const [soldFrom, setSoldFrom] = useState('');
+  const [soldTo, setSoldTo] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('Wszystkie');
+  const [locationFilter, setLocationFilter] = useState('Wszystkie');
 
   useEffect(() => {
     let mounted = true;
@@ -103,16 +155,100 @@ export function Events() {
     return ['Wszystkie', ...unique];
   }, [events]);
 
-  useEffect(() => {
-    if (!categories.includes(selectedCategory)) {
-      setSelectedCategory('Wszystkie');
-    }
-  }, [categories, selectedCategory]);
+  const locations = useMemo(() => {
+    const unique = [...new Set(events.map((event) => event.location).filter(Boolean))];
+    return ['Wszystkie', ...unique];
+  }, [events]);
 
-  const filteredEvents =
-    selectedCategory === 'Wszystkie'
-      ? events
-      : events.filter((event) => event.category === selectedCategory);
+  useEffect(() => {
+    if (!categories.includes(categoryFilter)) {
+      setCategoryFilter('Wszystkie');
+    }
+  }, [categories, categoryFilter]);
+
+  useEffect(() => {
+    if (!locations.includes(locationFilter)) {
+      setLocationFilter('Wszystkie');
+    }
+  }, [locations, locationFilter]);
+
+  const processedEvents = useMemo(() => {
+    const priceFromNumber = priceFrom === '' ? null : Number(priceFrom);
+    const priceToNumber = priceTo === '' ? null : Number(priceTo);
+    const availableFromNumber = availableFrom === '' ? null : Number(availableFrom);
+    const availableToNumber = availableTo === '' ? null : Number(availableTo);
+    const soldFromNumber = soldFrom === '' ? null : Number(soldFrom);
+    const soldToNumber = soldTo === '' ? null : Number(soldTo);
+
+    const filtered = events.filter((event) => {
+      const stats = getEventStats(event);
+      const matchesCategory =
+        categoryFilter === 'Wszystkie' || event.category === categoryFilter;
+      const matchesLocation =
+        locationFilter === 'Wszystkie' || event.location === locationFilter;
+      const matchesPriceFrom =
+        priceFromNumber === null || stats.minTicketPrice >= priceFromNumber;
+      const matchesPriceTo = priceToNumber === null || stats.minTicketPrice <= priceToNumber;
+      const matchesAvailableFrom =
+        availableFromNumber === null || stats.totalTicketsCount >= availableFromNumber;
+      const matchesAvailableTo =
+        availableToNumber === null || stats.totalTicketsCount <= availableToNumber;
+      const matchesSoldFrom =
+        soldFromNumber === null || stats.totalSoldCount >= soldFromNumber;
+      const matchesSoldTo = soldToNumber === null || stats.totalSoldCount <= soldToNumber;
+
+      return (
+        matchesCategory &&
+        matchesLocation &&
+        matchesPriceFrom &&
+        matchesPriceTo &&
+        matchesAvailableFrom &&
+        matchesAvailableTo &&
+        matchesSoldFrom &&
+        matchesSoldTo
+      );
+    });
+
+    return [...filtered].sort((a, b) => {
+      const aStats = getEventStats(a);
+      const bStats = getEventStats(b);
+      const aDate = Date.parse(a.date);
+      const bDate = Date.parse(b.date);
+
+      switch (sortBy) {
+        case 'priceAsc':
+          return aStats.minTicketPrice - bStats.minTicketPrice;
+        case 'priceDesc':
+          return bStats.minTicketPrice - aStats.minTicketPrice;
+        case 'typeAsc':
+          return a.category.localeCompare(b.category, 'pl');
+        case 'availableAsc':
+          return aStats.totalTicketsCount - bStats.totalTicketsCount;
+        case 'availableDesc':
+          return bStats.totalTicketsCount - aStats.totalTicketsCount;
+        case 'soldAsc':
+          return aStats.totalSoldCount - bStats.totalSoldCount;
+        case 'soldDesc':
+          return bStats.totalSoldCount - aStats.totalSoldCount;
+        case 'dateAsc':
+          return (Number.isNaN(aDate) ? 0 : aDate) - (Number.isNaN(bDate) ? 0 : bDate);
+        case 'dateDesc':
+        default:
+          return (Number.isNaN(bDate) ? 0 : bDate) - (Number.isNaN(aDate) ? 0 : aDate);
+      }
+    });
+  }, [
+    events,
+    sortBy,
+    categoryFilter,
+    locationFilter,
+    priceFrom,
+    priceTo,
+    availableFrom,
+    availableTo,
+    soldFrom,
+    soldTo,
+  ]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -124,17 +260,116 @@ export function Events() {
       </div>
 
       <div className="container mx-auto px-4 py-8">
-        <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
-          {categories.map((category) => (
-            <Button
-              key={category}
-              variant={selectedCategory === category ? 'default' : 'outline'}
-              onClick={() => setSelectedCategory(category)}
-              className="whitespace-nowrap"
+        <div className="mb-8 rounded-lg border bg-white p-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortOption)}
+              className="border rounded-md px-3 py-2"
             >
-              {category}
+              <option value="dateDesc">Data: od najnowszych</option>
+              <option value="dateAsc">Data: od najstarszych</option>
+              <option value="priceAsc">Cena biletu: rosnaco</option>
+              <option value="priceDesc">Cena biletu: malejaco</option>
+              <option value="typeAsc">Rodzaj: alfabetycznie</option>
+              <option value="availableAsc">Dostepne bilety: rosnaco</option>
+              <option value="availableDesc">Dostepne bilety: malejaco</option>
+              <option value="soldAsc">Sprzedane bilety: rosnaco</option>
+              <option value="soldDesc">Sprzedane bilety: malejaco</option>
+            </select>
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="border rounded-md px-3 py-2"
+            >
+              {categories.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
+            <select
+              value={locationFilter}
+              onChange={(e) => setLocationFilter(e.target.value)}
+              className="border rounded-md px-3 py-2"
+            >
+              {locations.map((location) => (
+                <option key={location} value={location}>
+                  {location}
+                </option>
+              ))}
+            </select>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="Cena od"
+              value={priceFrom}
+              onChange={(e) => setPriceFrom(e.target.value)}
+              className="border rounded-md px-3 py-2"
+            />
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="Cena do"
+              value={priceTo}
+              onChange={(e) => setPriceTo(e.target.value)}
+              className="border rounded-md px-3 py-2"
+            />
+            <input
+              type="number"
+              min="0"
+              step="1"
+              placeholder="Dostepne bilety od"
+              value={availableFrom}
+              onChange={(e) => setAvailableFrom(e.target.value)}
+              className="border rounded-md px-3 py-2"
+            />
+            <input
+              type="number"
+              min="0"
+              step="1"
+              placeholder="Dostepne bilety do"
+              value={availableTo}
+              onChange={(e) => setAvailableTo(e.target.value)}
+              className="border rounded-md px-3 py-2"
+            />
+            <input
+              type="number"
+              min="0"
+              step="1"
+              placeholder="Sprzedane bilety od"
+              value={soldFrom}
+              onChange={(e) => setSoldFrom(e.target.value)}
+              className="border rounded-md px-3 py-2"
+            />
+            <input
+              type="number"
+              min="0"
+              step="1"
+              placeholder="Sprzedane bilety do"
+              value={soldTo}
+              onChange={(e) => setSoldTo(e.target.value)}
+              className="border rounded-md px-3 py-2"
+            />
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSortBy('dateDesc');
+                setCategoryFilter('Wszystkie');
+                setLocationFilter('Wszystkie');
+                setPriceFrom('');
+                setPriceTo('');
+                setAvailableFrom('');
+                setAvailableTo('');
+                setSoldFrom('');
+                setSoldTo('');
+              }}
+            >
+              Wyczyść filtry
             </Button>
-          ))}
+          </div>
         </div>
 
         {isLoading && (
@@ -152,14 +387,8 @@ export function Events() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {!isLoading &&
             !error &&
-            filteredEvents.map((event) => {
-              const minTicketPrice = event.ticketTypes.length
-                ? Math.min(...event.ticketTypes.map((ticket) => Number(ticket.price)))
-                : event.ticketPrice;
-              const totalTicketsCount = event.ticketTypes.reduce((sum, ticket) => {
-                const available = Number(ticket.available ?? 0);
-                return sum + (Number.isFinite(available) ? available : 0);
-              }, 0);
+            processedEvents.map((event) => {
+              const { minTicketPrice, totalTicketsCount, totalSoldCount } = getEventStats(event);
 
               const eventDate = new Date(event.date);
               const createdDate = new Date(event.createdAt);
@@ -183,7 +412,7 @@ export function Events() {
                     <div className="flex items-center justify-between mb-3">
                       <Badge>{event.category}</Badge>
                       <span className="text-sm text-gray-600">
-                        Od {minTicketPrice ?? 0} zł | Łącznie biletów: {totalTicketsCount}
+                        Od {minTicketPrice} zł | Łącznie biletów: {totalTicketsCount} | Sprzedane: {totalSoldCount}
                       </span>
                     </div>
                     <h3 className="text-xl mb-3">{event.title}</h3>
@@ -225,9 +454,9 @@ export function Events() {
             })}
         </div>
 
-        {!isLoading && !error && filteredEvents.length === 0 && (
+        {!isLoading && !error && processedEvents.length === 0 && (
           <div className="text-center py-16">
-            <p className="text-gray-500 text-lg">Brak wydarzeń w tej kategorii.</p>
+            <p className="text-gray-500 text-lg">Brak wydarzeń dla wybranych filtrow.</p>
           </div>
         )}
       </div>

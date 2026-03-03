@@ -137,16 +137,70 @@ export default async function handler(req: any, res: any) {
       // fallback to empty array to keep frontend stable.
       let ticketTypes: any[] = [];
       try {
-        ticketTypes = await sql`
-          SELECT
-            id,
-            event_id,
-            name,
-            price,
-            available,
-            description
-          FROM ticket_types
+        const ticketTypeColumns = await sql`
+          SELECT column_name
+          FROM information_schema.columns
+          WHERE table_schema = 'public' AND table_name = 'ticket_types'
         `;
+        const ticketTypeColumnNames = new Set(
+          ticketTypeColumns.map((column: any) => String(column.column_name))
+        );
+        const hasSoldColumn = ticketTypeColumnNames.has("sold");
+        const hasInitialAvailableColumn = ticketTypeColumnNames.has("initial_available");
+
+        if (hasSoldColumn && hasInitialAvailableColumn) {
+          ticketTypes = await sql`
+            SELECT
+              id,
+              event_id,
+              name,
+              price,
+              available,
+              description,
+              sold,
+              initial_available
+            FROM ticket_types
+          `;
+        } else if (hasSoldColumn) {
+          ticketTypes = await sql`
+            SELECT
+              id,
+              event_id,
+              name,
+              price,
+              available,
+              description,
+              sold,
+              NULL::integer AS initial_available
+            FROM ticket_types
+          `;
+        } else if (hasInitialAvailableColumn) {
+          ticketTypes = await sql`
+            SELECT
+              id,
+              event_id,
+              name,
+              price,
+              available,
+              description,
+              NULL::integer AS sold,
+              initial_available
+            FROM ticket_types
+          `;
+        } else {
+          ticketTypes = await sql`
+            SELECT
+              id,
+              event_id,
+              name,
+              price,
+              available,
+              description,
+              NULL::integer AS sold,
+              NULL::integer AS initial_available
+            FROM ticket_types
+          `;
+        }
       } catch (ticketTypesError) {
         console.warn("ticket_types query skipped:", ticketTypesError);
       }
