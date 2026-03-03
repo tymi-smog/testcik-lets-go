@@ -44,7 +44,8 @@ type SortOption =
   | "soldAsc"
   | "soldDesc"
   | "dateAsc"
-  | "dateDesc";
+  | "dateDesc"
+  | "createdDesc";
 
 function getMyEventStats(event: MyEvent) {
   const tickets = event.ticketTypes ?? [];
@@ -91,7 +92,7 @@ export function MyEvents() {
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [events, setEvents] = useState<MyEvent[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
-  const [sortBy, setSortBy] = useState<SortOption>("dateDesc");
+  const [sortBy, setSortBy] = useState<SortOption>("dateAsc");
   const [priceFrom, setPriceFrom] = useState("");
   const [priceTo, setPriceTo] = useState("");
   const [availableFrom, setAvailableFrom] = useState("");
@@ -201,6 +202,9 @@ export function MyEvents() {
       const bStats = getMyEventStats(b);
       const aDate = Date.parse(a.date);
       const bDate = Date.parse(b.date);
+      const aCreated = Date.parse(a.created_at || a.date || "");
+      const bCreated = Date.parse(b.created_at || b.date || "");
+      const now = Date.now();
       const aCategory = a.category || "Inne";
       const bCategory = b.category || "Inne";
 
@@ -220,10 +224,13 @@ export function MyEvents() {
         case "soldDesc":
           return bStats.totalSoldCount - aStats.totalSoldCount;
         case "dateAsc":
-          return (Number.isNaN(aDate) ? 0 : aDate) - (Number.isNaN(bDate) ? 0 : bDate);
+          return Math.abs((Number.isNaN(aDate) ? 0 : aDate) - now) - Math.abs((Number.isNaN(bDate) ? 0 : bDate) - now);
         case "dateDesc":
+          return Math.abs((Number.isNaN(bDate) ? 0 : bDate) - now) - Math.abs((Number.isNaN(aDate) ? 0 : aDate) - now);
+        case "createdDesc":
+          return (Number.isNaN(bCreated) ? 0 : bCreated) - (Number.isNaN(aCreated) ? 0 : aCreated);
         default:
-          return (Number.isNaN(bDate) ? 0 : bDate) - (Number.isNaN(aDate) ? 0 : aDate);
+          return 0;
       }
     });
   }, [
@@ -550,8 +557,9 @@ export function MyEvents() {
               onChange={(e) => setSortBy(e.target.value as SortOption)}
               className="border rounded-md px-3 py-2"
             >
-              <option value="dateDesc">Data: od najnowszych</option>
-              <option value="dateAsc">Data: od najstarszych</option>
+              <option value="dateAsc">Data: od najblizszych</option>
+              <option value="dateDesc">Data: od najdalszych w czasie</option>
+              <option value="createdDesc">Ostatnio dodane</option>
               <option value="priceAsc">Cena biletu: rosnaco</option>
               <option value="priceDesc">Cena biletu: malejaco</option>
               <option value="typeAsc">Rodzaj: alfabetycznie</option>
@@ -639,7 +647,7 @@ export function MyEvents() {
             <button
               type="button"
               onClick={() => {
-                setSortBy("dateDesc");
+                setSortBy("dateAsc");
                 setCategoryFilter("Wszystkie");
                 setLocationFilter("Wszystkie");
                 setPriceFrom("");

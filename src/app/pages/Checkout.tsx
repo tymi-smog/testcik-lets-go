@@ -82,14 +82,14 @@ export function Checkout() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result?.error || "Nie udalo sie zrealizowac platnosci.");
+        throw new Error(result?.error || "Nie udało sie zrealizowac płatności.");
       }
 
-      toast.success("Zakup zakonczony. Potwierdzenie wyslalismy na e-mail.");
+      toast.success("Zakup zakończony. Potwierdzenie wysłalismy na e-mail.");
       clearCart();
       navigate("/");
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Wystapil nieznany blad.";
+      const message = error instanceof Error ? error.message : "Wystąpił nieznany błąd.";
       toast.error(message);
     } finally {
       setIsProcessing(false);
@@ -99,7 +99,7 @@ export function Checkout() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-gray-600">Ladowanie sesji...</p>
+        <p className="text-gray-600">Ładowanie sesji...</p>
       </div>
     );
   }
@@ -108,12 +108,12 @@ export function Checkout() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl mb-2">Zakup niedostepny</h2>
+          <h2 className="text-2xl mb-2">Zakup niedostępny</h2>
           <p className="text-gray-600 mb-6">
-            Tylko zalogowani i zweryfikowani uzytkownicy moga kupowac bilety.
+            Tylko zalogowani i zweryfikowani użytkownicy mogą kupować bilety.
           </p>
           <Button onClick={() => navigate(user ? "/" : "/login")}>
-            {user ? "Wroc na strone glowna" : "Przejdz do logowania"}
+            {user ? "Wróć na stronę glowną" : "Przejdź do logowania"}
           </Button>
         </div>
       </div>
@@ -125,9 +125,9 @@ export function Checkout() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <ShoppingCart className="size-16 mx-auto text-gray-400 mb-4" />
-          <h2 className="text-2xl mb-2">Twoj koszyk jest pusty</h2>
-          <p className="text-gray-600 mb-6">Przegladaj wydarzenia i dodaj bilety do koszyka</p>
-          <Button onClick={() => navigate("/events")}>Przegladaj wydarzenia</Button>
+          <h2 className="text-2xl mb-2">Twój koszyk jest pusty</h2>
+          <p className="text-gray-600 mb-6">Przeglądaj wydarzenia i dodaj bilety do koszyka</p>
+          <Button onClick={() => navigate("/events")}>Przeglądaj wydarzenia</Button>
         </div>
       </div>
     );
@@ -153,7 +153,7 @@ export function Checkout() {
                     <div className="flex-1">
                       <h3 className="mb-1">{item.eventTitle}</h3>
                       <p className="text-sm text-gray-600">{item.ticketTypeName}</p>
-                      <p className="text-sm">{item.price} zl za sztuke</p>
+                      <p className="text-sm">{item.price} zł za sztukę</p>
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="flex items-center gap-2 border rounded px-2">
@@ -191,13 +191,13 @@ export function Checkout() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Informacje o platnosci</CardTitle>
+                <CardTitle>Informacje o płatności</CardTitle>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleCheckout} className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="firstName">Imie</Label>
+                      <Label htmlFor="firstName">Imię</Label>
                       <Input
                         id="firstName"
                         value={firstName}
@@ -237,7 +237,7 @@ export function Checkout() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="expiry">Data waznosci</Label>
+                      <Label htmlFor="expiry">Data ważności</Label>
                       <Input
                         id="expiry"
                         placeholder="MM/YY"
@@ -271,7 +271,7 @@ export function Checkout() {
           <div>
             <Card className="sticky top-24">
               <CardHeader>
-                <CardTitle>Podsumowanie zamowienia</CardTitle>
+                <CardTitle>Podsumowanie zamówienia</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
@@ -283,7 +283,7 @@ export function Checkout() {
                       <span className="text-gray-600">
                         {item.quantity}x {item.ticketTypeName}
                       </span>
-                      <span>{(item.price * item.quantity).toFixed(2)} zl</span>
+                      <span>{(item.price * item.quantity).toFixed(2)} zł</span>
                     </div>
                   ))}
                 </div>
@@ -293,19 +293,19 @@ export function Checkout() {
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Suma biletow</span>
-                    <span>{getTotal().toFixed(2)} zl</span>
+                    <span>{getTotal().toFixed(2)} zł</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Oplata serwisowa</span>
-                    <span>{serviceFee.toFixed(2)} zl</span>
+                    <span className="text-gray-600">Opłata serwisowa</span>
+                    <span>{serviceFee.toFixed(2)} zł</span>
                   </div>
                 </div>
 
                 <Separator />
 
                 <div className="flex justify-between text-lg">
-                  <span>Lacznie</span>
-                  <span>{grandTotal.toFixed(2)} zl</span>
+                  <span>Łącznie</span>
+                  <span>{grandTotal.toFixed(2)} zł</span>
                 </div>
               </CardContent>
             </Card>
