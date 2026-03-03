@@ -13,6 +13,13 @@ type MyEvent = {
   image?: string | null;
 };
 
+type TicketDraft = {
+  name: string;
+  price: string;
+  available: string;
+  description: string;
+};
+
 const fallbackImage =
   "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?auto=format&fit=crop&w=1200&q=80";
 
@@ -24,6 +31,9 @@ export function MyEvents() {
   const [location, setLocation] = useState("");
   const [date, setDate] = useState("");
   const [imageUrl, setImageUrl] = useState("");
+  const [ticketTypes, setTicketTypes] = useState<TicketDraft[]>([
+    { name: "", price: "", available: "", description: "" },
+  ]);
 
   const [submitting, setSubmitting] = useState(false);
   const [events, setEvents] = useState<MyEvent[]>([]);
@@ -65,10 +75,52 @@ export function MyEvents() {
     loadMyEvents(user?.userId);
   }, [user?.userId]);
 
-  const canSubmit = useMemo(
-    () => !!title.trim() && !!description.trim() && !!location.trim() && !!date && !!token,
-    [title, description, location, date, token]
+  const hasValidTickets = useMemo(
+    () =>
+      ticketTypes.length > 0 &&
+      ticketTypes.every((ticket) => {
+        const price = Number(ticket.price);
+        const available = Number(ticket.available);
+        return (
+          !!ticket.name.trim() &&
+          Number.isFinite(price) &&
+          price >= 0 &&
+          Number.isFinite(available) &&
+          available >= 1
+        );
+      }),
+    [ticketTypes]
   );
+
+  const canSubmit = useMemo(
+    () =>
+      !!title.trim() &&
+      !!description.trim() &&
+      !!location.trim() &&
+      !!date &&
+      !!token &&
+      hasValidTickets,
+    [title, description, location, date, token, hasValidTickets]
+  );
+
+  function addTicketRow() {
+    setTicketTypes((prev) => [...prev, { name: "", price: "", available: "", description: "" }]);
+  }
+
+  function removeTicketRow(index: number) {
+    setTicketTypes((prev) => {
+      if (prev.length === 1) {
+        return prev;
+      }
+      return prev.filter((_, idx) => idx !== index);
+    });
+  }
+
+  function updateTicketRow(index: number, field: keyof TicketDraft, value: string) {
+    setTicketTypes((prev) =>
+      prev.map((ticket, idx) => (idx === index ? { ...ticket, [field]: value } : ticket))
+    );
+  }
 
   async function handleCreateEvent(e: React.FormEvent) {
     e.preventDefault();
@@ -94,6 +146,12 @@ export function MyEvents() {
           location,
           date,
           imageUrl,
+          ticketTypes: ticketTypes.map((ticket) => ({
+            name: ticket.name.trim(),
+            price: Number(ticket.price),
+            available: Number(ticket.available),
+            description: ticket.description.trim(),
+          })),
         }),
       });
 
@@ -108,6 +166,7 @@ export function MyEvents() {
       setLocation("");
       setDate("");
       setImageUrl("");
+      setTicketTypes([{ name: "", price: "", available: "", description: "" }]);
       await loadMyEvents(user?.userId);
       alert("Wydarzenie zostalo dodane.");
     } catch (error) {
@@ -190,6 +249,74 @@ export function MyEvents() {
             placeholder="Link do obrazka (np. Imgur)"
             className="w-full border rounded-md p-2"
           />
+
+          <div className="space-y-3 rounded-md border p-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-medium">Typy biletow</h3>
+              <button
+                type="button"
+                onClick={addTicketRow}
+                className="rounded-md border px-3 py-1 text-sm hover:bg-gray-100"
+              >
+                Dodaj typ
+              </button>
+            </div>
+
+            {ticketTypes.map((ticket, index) => (
+              <div key={index} className="rounded-md border p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium">Bilet {index + 1}</p>
+                  <button
+                    type="button"
+                    onClick={() => removeTicketRow(index)}
+                    disabled={ticketTypes.length === 1}
+                    className="rounded-md border px-2 py-1 text-xs hover:bg-gray-100 disabled:opacity-50"
+                  >
+                    Usun
+                  </button>
+                </div>
+
+                <input
+                  type="text"
+                  value={ticket.name}
+                  onChange={(e) => updateTicketRow(index, "name", e.target.value)}
+                  placeholder="Nazwa biletu"
+                  className="w-full border rounded-md p-2"
+                  required
+                />
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={ticket.price}
+                    onChange={(e) => updateTicketRow(index, "price", e.target.value)}
+                    placeholder="Cena"
+                    className="w-full border rounded-md p-2"
+                    required
+                  />
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={ticket.available}
+                    onChange={(e) => updateTicketRow(index, "available", e.target.value)}
+                    placeholder="Ilosc"
+                    className="w-full border rounded-md p-2"
+                    required
+                  />
+                </div>
+
+                <textarea
+                  value={ticket.description}
+                  onChange={(e) => updateTicketRow(index, "description", e.target.value)}
+                  placeholder="Opis biletu"
+                  className="w-full border rounded-md p-2 min-h-20"
+                />
+              </div>
+            ))}
+          </div>
 
           <button
             type="submit"

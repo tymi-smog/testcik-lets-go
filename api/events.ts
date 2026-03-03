@@ -16,6 +16,13 @@ type EventRow = {
   category?: string | null;
 };
 
+type TicketInput = {
+  name: string;
+  price: number;
+  available: number;
+  description: string;
+};
+
 function parseRequestBody(body: unknown): any {
   if (typeof body === "string") {
     return JSON.parse(body);
@@ -178,22 +185,38 @@ export default async function handler(req: any, res: any) {
       const location = String(body?.location ?? "").trim();
       const date = String(body?.date ?? "").trim();
       const imageUrl = String(body?.imageUrl ?? "").trim();
-
-      const parsedTicketPrice = Number(body?.ticketPrice ?? 0);
-      const ticketPrice = Number.isFinite(parsedTicketPrice) && parsedTicketPrice >= 0 ? parsedTicketPrice : 0;
-
-      const parsedAvailable = Number(body?.availableTickets ?? 0);
-      const availableTickets =
-        Number.isFinite(parsedAvailable) && parsedAvailable >= 0 ? Math.floor(parsedAvailable) : 0;
+      const rawTicketTypes = Array.isArray(body?.ticketTypes) ? body.ticketTypes : [];
+      const ticketTypes: TicketInput[] = rawTicketTypes.map((ticket: any) => ({
+        name: String(ticket?.name ?? "").trim(),
+        price: Number(ticket?.price ?? 0),
+        available: Math.floor(Number(ticket?.available ?? 0)),
+        description: String(ticket?.description ?? "").trim(),
+      }));
 
       if (!title || !description || !location || !date) {
         return res.status(400).json({ error: "Missing required fields" });
+      }
+      if (ticketTypes.length === 0) {
+        return res.status(400).json({ error: "At least one ticket type is required" });
+      }
+      const hasInvalidTicket = ticketTypes.some(
+        (ticket) =>
+          !ticket.name ||
+          !Number.isFinite(ticket.price) ||
+          ticket.price < 0 ||
+          !Number.isFinite(ticket.available) ||
+          ticket.available < 1
+      );
+      if (hasInvalidTicket) {
+        return res.status(400).json({ error: "Invalid ticket types payload" });
       }
 
       const parsedDate = new Date(date);
       if (Number.isNaN(parsedDate.getTime())) {
         return res.status(400).json({ error: "Invalid date" });
       }
+      const ticketPrice = Math.min(...ticketTypes.map((ticket) => ticket.price));
+      const availableTickets = ticketTypes.reduce((sum, ticket) => sum + ticket.available, 0);
 
       let categoryId: number | null = null;
       try {
@@ -231,6 +254,7 @@ export default async function handler(req: any, res: any) {
       const hasImageUrl = columnNames.has("image_url");
 
       let createdEvent: any[] = [];
+      let eventId: number | null = null;
 
       if (hasImage) {
         createdEvent = await sql`
@@ -309,10 +333,56 @@ export default async function handler(req: any, res: any) {
           RETURNING id
         `;
       }
+      eventId = Number(createdEvent[0]?.id ?? 0) || null;
+      if (!eventId) {
+        return res.status(500).json({ error: "Event created without id" });
+      }
+
+      const ticketColumns = await sql`
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'ticket_types'
+      `;
+      const ticketColumnNames = new Set(ticketColumns.map((column: any) => String(column.column_name)));
+      const hasTicketTypes = ticketColumnNames.size > 0;
+      if (!hasTicketTypes) {
+        await sql`
+          DELETE FROM events
+          WHERE id = ${eventId}
+        `;
+        return res.status(500).json({ error: "ticket_types table is missing" });
+      }
+
+      try {
+        for (const ticket of ticketTypes) {
+          await sql`
+            INSERT INTO ticket_types (
+              event_id,
+              name,
+              price,
+              available,
+              description
+            )
+            VALUES (
+              ${eventId},
+              ${ticket.name},
+              ${ticket.price},
+              ${ticket.available},
+              ${ticket.description || null}
+            )
+          `;
+        }
+      } catch (ticketInsertError: any) {
+        await sql`
+          DELETE FROM events
+          WHERE id = ${eventId}
+        `;
+        throw ticketInsertError;
+      }
 
       return res.status(201).json({
         message: "Event created",
-        id: createdEvent[0]?.id ?? null,
+        id: eventId,
       });
     } catch (error: any) {
       console.error("EVENT CREATE ERROR:", error);
