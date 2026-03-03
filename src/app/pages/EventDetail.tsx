@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router';
-import { useCart } from '../context/CartContext';
-import { Button } from '../components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { Badge } from '../components/ui/badge';
-import { Calendar, MapPin, Clock, Minus, Plus, ArrowLeft, Check } from 'lucide-react';
-import { toast } from 'sonner';
+import { useEffect, useState } from "react";
+import { useParams, Link } from "react-router";
+import { useCart } from "../context/CartContext";
+import { Button } from "../components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { Badge } from "../components/ui/badge";
+import { Calendar, MapPin, Clock, Minus, Plus, ArrowLeft, Check } from "lucide-react";
+import { toast } from "sonner";
 
 type ApiTicketType = {
   id: string | number;
@@ -46,7 +46,7 @@ type EventDetailData = {
 };
 
 const fallbackImage =
-  'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?auto=format&fit=crop&w=1600&q=80';
+  "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?auto=format&fit=crop&w=1600&q=80";
 
 export function EventDetail() {
   const { id } = useParams();
@@ -74,9 +74,9 @@ export function EventDetail() {
         setIsLoading(true);
         setError(null);
 
-        const response = await fetch('/api/events');
+        const response = await fetch("/api/events");
         if (!response.ok) {
-          throw new Error(`Nie udało się pobrać wydarzeń (${response.status})`);
+          throw new Error(`Nie uda\u0142o si\u0119 pobra\u0107 wydarze\u0144 (${response.status})`);
         }
 
         const events = (await response.json()) as ApiEvent[];
@@ -92,11 +92,11 @@ export function EventDetail() {
         const mappedEvent: EventDetailData = {
           id: String(rawEvent.id),
           title: rawEvent.title,
-          category: rawEvent.category || 'Inne',
+          category: rawEvent.category || "Inne",
           date: rawEvent.date,
-          location: rawEvent.location || 'Brak lokalizacji',
+          location: rawEvent.location || "Brak lokalizacji",
           image: rawEvent.image || fallbackImage,
-          description: rawEvent.description || 'Brak opisu wydarzenia.',
+          description: rawEvent.description || "Brak opisu wydarzenia.",
           ticketTypes: (rawEvent.ticketTypes || []).map((ticket) => ({
             id: String(ticket.id),
             name: ticket.name,
@@ -111,7 +111,7 @@ export function EventDetail() {
         }
       } catch (err) {
         if (mounted) {
-          setError(err instanceof Error ? err.message : 'Wystąpił nieznany błąd');
+          setError(err instanceof Error ? err.message : "Wyst\u0105pi\u0142 nieznany b\u0142\u0105d");
           setEvent(null);
         }
       } finally {
@@ -169,13 +169,12 @@ export function EventDetail() {
 
     if (itemsAdded > 0) {
       if (itemsAdded > 4) {
-        toast.success(`Dodano ${itemsAdded} biletów do koszyka!`);
+        toast.success(`Dodano ${itemsAdded} bilet\u00f3w do koszyka!`);
       } else if (itemsAdded > 1) {
         toast.success(`Dodano ${itemsAdded} bilety do koszyka!`);
       } else {
         toast.success(`Dodano ${itemsAdded} bilet do koszyka!`);
       }
-
       setSelectedTickets({});
     }
   };
@@ -183,7 +182,7 @@ export function EventDetail() {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-500 text-lg">Ładowanie wydarzenia...</p>
+        <p className="text-gray-500 text-lg">\u0141adowanie wydarzenia...</p>
       </div>
     );
   }
@@ -194,7 +193,7 @@ export function EventDetail() {
         <div className="text-center">
           <p className="text-xl mb-4 text-red-600">{error}</p>
           <Link to="/">
-            <Button>Wróć do wydarzeń</Button>
+            <Button>Wr\u00f3\u0107 do wydarze\u0144</Button>
           </Link>
         </div>
       </div>
@@ -207,7 +206,7 @@ export function EventDetail() {
         <div className="text-center">
           <p className="text-xl mb-4">Wydarzenie nie znalezione</p>
           <Link to="/">
-            <Button>Wróć do wydarzeń</Button>
+            <Button>Wr\u00f3\u0107 do wydarze\u0144</Button>
           </Link>
         </div>
       </div>
@@ -222,19 +221,18 @@ export function EventDetail() {
 
   const eventDate = new Date(event.date);
   const dateLabel = Number.isNaN(eventDate.getTime())
-    ? 'Brak daty'
-    : eventDate.toLocaleDateString('pl-PL', {
-        weekday: 'long',
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric',
+    ? "Brak daty"
+    : eventDate.toLocaleDateString("pl-PL", {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+        year: "numeric",
       });
-
   const timeLabel = Number.isNaN(eventDate.getTime())
-    ? 'Brak godziny'
-    : eventDate.toLocaleTimeString('pl-PL', {
-        hour: '2-digit',
-        minute: '2-digit',
+    ? "Brak godziny"
+    : eventDate.toLocaleTimeString("pl-PL", {
+        hour: "2-digit",
+        minute: "2-digit",
       });
 
   return (
@@ -249,7 +247,7 @@ export function EventDetail() {
             <Link to="/">
               <Button variant="ghost" className="text-white hover:text-white mb-4">
                 <ArrowLeft className="size-4 mr-2" />
-                Wróć do wydarzeń
+                Wr\u00f3\u0107 do wydarze\u0144
               </Button>
             </Link>
             <Badge className="mb-3">{event.category}</Badge>
@@ -263,7 +261,7 @@ export function EventDetail() {
           <div className="md:col-span-2 space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Szczegóły wydarzenia</CardTitle>
+                <CardTitle>Szczeg\u00f3\u0142y wydarzenia</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center gap-3">
@@ -311,12 +309,12 @@ export function EventDetail() {
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex-1">
                         <p>{ticket.name}</p>
-                        <p className="text-sm text-gray-600">{ticket.available} Dostępne</p>
+                        <p className="text-sm text-gray-600">{ticket.available} Dost\u0119pne</p>
                         {ticket.description && (
                           <p className="text-xs text-gray-500 mt-1">{ticket.description}</p>
                         )}
                       </div>
-                      <p className="text-lg">{ticket.price} zł</p>
+                      <p className="text-lg">{ticket.price} z\u0142</p>
                     </div>
                     <div className="flex items-center justify-between mt-3">
                       <div className="flex items-center gap-2">
@@ -345,22 +343,17 @@ export function EventDetail() {
                 {totalSelected > 0 && (
                   <div className="border-t pt-4 mt-4 space-y-2">
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Łącznie biletów:</span>
+                      <span className="text-gray-600">\u0141\u0105cznie bilet\u00f3w:</span>
                       <span>{totalSelected}</span>
                     </div>
                     <div className="flex justify-between text-lg">
-                      <span>Łączna cena:</span>
-                      <span>{totalPrice} zł</span>
+                      <span>\u0141\u0105czna cena:</span>
+                      <span>{totalPrice} z\u0142</span>
                     </div>
                   </div>
                 )}
 
-                <Button
-                  className="w-full"
-                  size="lg"
-                  onClick={handleAddToCart}
-                  disabled={totalSelected === 0}
-                >
+                <Button className="w-full" size="lg" onClick={handleAddToCart} disabled={totalSelected === 0}>
                   <Check className="size-5 mr-2" />
                   Dodaj do koszyka
                 </Button>
