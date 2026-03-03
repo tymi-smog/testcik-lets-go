@@ -399,6 +399,13 @@ export function MyEvents() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {!loadingEvents &&
             events.map((event) => {
+              const minTicketPrice = event.ticketTypes?.length
+                ? Math.min(...event.ticketTypes.map((ticket) => Number(ticket.price)))
+                : 0;
+              const totalTicketsCount = (event.ticketTypes ?? []).reduce((sum, ticket) => {
+                const available = Number(ticket.available ?? 0);
+                return sum + (Number.isFinite(available) ? available : 0);
+              }, 0);
               const createdAt = new Date(event.created_at || event.date || "");
               const createdLabel = Number.isNaN(createdAt.getTime())
                 ? "Brak daty"
@@ -417,6 +424,9 @@ export function MyEvents() {
                   />
                   <div className="p-4 space-y-2">
                     <h3 className="font-medium text-lg">{event.title}</h3>
+                    <p className="text-sm text-gray-600">
+                      Od {minTicketPrice} zł | Łącznie biletów: {totalTicketsCount}
+                    </p>
                     <p className="text-sm text-gray-600">{event.location || "Brak lokalizacji"}</p>
                     {user.is_admin && (
                       <p className="text-xs text-gray-500">

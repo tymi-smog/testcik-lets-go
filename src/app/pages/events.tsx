@@ -8,6 +8,7 @@ import { Calendar, Clock, MapPin } from 'lucide-react';
 type ApiTicketType = {
   id: string | number;
   price: number | string;
+  available?: number | string;
 };
 
 type ApiEvent = {
@@ -155,6 +156,10 @@ export function Events() {
               const minTicketPrice = event.ticketTypes.length
                 ? Math.min(...event.ticketTypes.map((ticket) => Number(ticket.price)))
                 : event.ticketPrice;
+              const totalTicketsCount = event.ticketTypes.reduce((sum, ticket) => {
+                const available = Number(ticket.available ?? 0);
+                return sum + (Number.isFinite(available) ? available : 0);
+              }, 0);
 
               const eventDate = new Date(event.date);
               const createdDate = new Date(event.createdAt);
@@ -177,7 +182,9 @@ export function Events() {
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between mb-3">
                       <Badge>{event.category}</Badge>
-                      <span className="text-sm text-gray-600">Od {minTicketPrice ?? 0} zł</span>
+                      <span className="text-sm text-gray-600">
+                        Od {minTicketPrice ?? 0} zł | Łącznie biletów: {totalTicketsCount}
+                      </span>
                     </div>
                     <h3 className="text-xl mb-3">{event.title}</h3>
                     <p className="text-xs text-gray-500 mb-3">
