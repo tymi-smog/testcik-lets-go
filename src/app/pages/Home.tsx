@@ -17,6 +17,7 @@ type ApiEvent = {
   date: string;
   created_at?: string | null;
   location?: string | null;
+  image_url?: string | null;
   image?: string | null;
   ticket_price?: number | string | null;
   ticketTypes?: ApiTicketType[];
@@ -64,7 +65,7 @@ export function Home() {
           date: event.date,
           createdAt: Date.parse(event.created_at || event.date || ""),
           location: event.location || "Brak lokalizacji",
-          image: event.image || fallbackImage,
+          image: event.image_url || event.image || fallbackImage,
           ticketTypes: event.ticketTypes || [],
           ticketPrice:
             event.ticket_price === null || event.ticket_price === undefined

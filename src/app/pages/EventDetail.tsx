@@ -21,6 +21,7 @@ type ApiEvent = {
   category?: string | null;
   date: string;
   location?: string | null;
+  image_url?: string | null;
   image?: string | null;
   description?: string | null;
   ticketTypes?: ApiTicketType[];
@@ -95,7 +96,7 @@ export function EventDetail() {
           category: rawEvent.category || "Inne",
           date: rawEvent.date,
           location: rawEvent.location || "Brak lokalizacji",
-          image: rawEvent.image || fallbackImage,
+          image: rawEvent.image_url || rawEvent.image || fallbackImage,
           description: rawEvent.description || "Brak opisu wydarzenia.",
           ticketTypes: (rawEvent.ticketTypes || []).map((ticket) => ({
             id: String(ticket.id),

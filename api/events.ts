@@ -6,30 +6,83 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const events = await sql`
-      SELECT 
-        events.id,
-        events.creator_id,
-        events.category_id,
-        events.title,
-        events.description,
-        events.location,
-        events.date,
-        events.ticket_price,
-        events.available_tickets,
-        events.created_at,
-        categories.name AS category
-      FROM events
-      LEFT JOIN categories ON events.category_id = categories.id
-      ORDER BY events.date ASC
+    const columns = await sql`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'events'
     `;
+
+    const columnNames = new Set(columns.map((column: any) => String(column.column_name)));
+    const hasImage = columnNames.has("image");
+    const hasImageUrl = columnNames.has("image_url");
+
+    let events: any[] = [];
+
+    if (hasImage) {
+      events = await sql`
+        SELECT
+          events.id,
+          events.creator_id,
+          events.category_id,
+          events.title,
+          events.description,
+          events.location,
+          events.date,
+          events.ticket_price,
+          events.available_tickets,
+          events.created_at,
+          events.image AS image_url,
+          categories.name AS category
+        FROM events
+        LEFT JOIN categories ON events.category_id = categories.id
+        ORDER BY events.date ASC
+      `;
+    } else if (hasImageUrl) {
+      events = await sql`
+        SELECT
+          events.id,
+          events.creator_id,
+          events.category_id,
+          events.title,
+          events.description,
+          events.location,
+          events.date,
+          events.ticket_price,
+          events.available_tickets,
+          events.created_at,
+          events.image_url AS image_url,
+          categories.name AS category
+        FROM events
+        LEFT JOIN categories ON events.category_id = categories.id
+        ORDER BY events.date ASC
+      `;
+    } else {
+      events = await sql`
+        SELECT
+          events.id,
+          events.creator_id,
+          events.category_id,
+          events.title,
+          events.description,
+          events.location,
+          events.date,
+          events.ticket_price,
+          events.available_tickets,
+          events.created_at,
+          NULL::text AS image_url,
+          categories.name AS category
+        FROM events
+        LEFT JOIN categories ON events.category_id = categories.id
+        ORDER BY events.date ASC
+      `;
+    }
 
     // ticket_types may not exist in every deployment schema;
     // fallback to empty array to keep frontend stable.
     let ticketTypes: any[] = [];
     try {
       ticketTypes = await sql`
-        SELECT 
+        SELECT
           id,
           event_id,
           name,
@@ -49,8 +102,8 @@ export default async function handler(req: any, res: any) {
 
       return {
         ...event,
-        // image is optional in DB schema shared by user; frontend handles fallback.
-        image: null,
+        image_url: event.image_url || null,
+        image: event.image_url || `https://picsum.photos/seed/event-${event.id}/1200/675`,
         ticketTypes: eventTicketTypes,
       };
     });
