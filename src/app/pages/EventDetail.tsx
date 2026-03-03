@@ -231,6 +231,7 @@ export function EventDetail() {
   }, 0);
 
   const eventDate = new Date(event.date);
+  const isArchived = !Number.isNaN(eventDate.getTime()) && eventDate.getTime() < Date.now();
   const dateLabel = Number.isNaN(eventDate.getTime())
     ? "Brak daty"
     : eventDate.toLocaleDateString("pl-PL", {
@@ -340,7 +341,7 @@ export function EventDetail() {
                           size="sm"
                           variant="outline"
                           onClick={() => updateTicketQuantity(ticket.id, -1, ticket.available)}
-                          disabled={!selectedTickets[ticket.id]}
+                          disabled={!selectedTickets[ticket.id] || isArchived}
                         >
                           <Minus className="size-4" />
                         </Button>
@@ -349,7 +350,10 @@ export function EventDetail() {
                           size="sm"
                           variant="outline"
                           onClick={() => updateTicketQuantity(ticket.id, 1, ticket.available)}
-                          disabled={(selectedTickets[ticket.id] || 0) >= Math.min(10, ticket.available)}
+                          disabled={
+                            isArchived ||
+                            (selectedTickets[ticket.id] || 0) >= Math.min(10, ticket.available)
+                          }
                         >
                           <Plus className="size-4" />
                         </Button>
@@ -371,7 +375,17 @@ export function EventDetail() {
                   </div>
                 )}
 
-                <Button className="w-full" size="lg" onClick={handleAddToCart} disabled={totalSelected === 0}>
+                {isArchived && (
+                  <p className="text-sm text-amber-700 rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
+                    To wydarzenie jest w archiwum. Zakup biletów jest wyłączony.
+                  </p>
+                )}
+                <Button
+                  className="w-full"
+                  size="lg"
+                  onClick={handleAddToCart}
+                  disabled={totalSelected === 0 || isArchived}
+                >
                   <Check className="size-5 mr-2" />
                   Dodaj do koszyka
                 </Button>

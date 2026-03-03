@@ -35,6 +35,9 @@ export function Header() {
           <Link to="/events" className="hover:text-blue-600 transition-colors">
             Wszystkie wydarzenia
           </Link>
+          <Link to="/events-archive" className="hover:text-blue-600 transition-colors">
+            Archiwum wydarzeń
+          </Link>
           <Link to="/checkout" className="hover:text-blue-600 transition-colors">
             Płatność
           </Link>
@@ -71,11 +74,9 @@ export function Header() {
                   <DropdownMenuItem asChild>
                     <Link to="/profile">Szczegóły</Link>
                   </DropdownMenuItem>
-
                   <DropdownMenuItem asChild>
                     <Link to="/my-events">Moje wydarzenia</Link>
                   </DropdownMenuItem>
-
                   <DropdownMenuItem onClick={handleLogout}>Wyloguj się</DropdownMenuItem>
                 </>
               )}
@@ -98,3 +99,4 @@ export function Header() {
     </header>
   );
 }
+

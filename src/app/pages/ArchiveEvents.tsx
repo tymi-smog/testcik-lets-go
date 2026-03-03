@@ -1,9 +1,8 @@
-import { Link } from 'react-router';
-import { useEffect, useMemo, useState } from 'react';
-import { Card, CardContent, CardFooter } from '../components/ui/card';
-import { Badge } from '../components/ui/badge';
-import { Button } from '../components/ui/button';
-import { Calendar, Clock, MapPin } from 'lucide-react';
+import { useEffect, useMemo, useState } from "react";
+import { Card, CardContent } from "../components/ui/card";
+import { Badge } from "../components/ui/badge";
+import { Button } from "../components/ui/button";
+import { Calendar, Clock, MapPin } from "lucide-react";
 
 type ApiTicketType = {
   id: string | number;
@@ -30,7 +29,7 @@ type ApiEvent = {
   ticketTypes?: ApiTicketType[];
 };
 
-type EventsPageEvent = {
+type ArchiveEvent = {
   id: string;
   title: string;
   category: string;
@@ -44,22 +43,22 @@ type EventsPageEvent = {
   ticketPrice: number | null;
 };
 
-const fallbackImage =
-  'https://images.unsplash.com/photo-1523580494863-6f3031224c94?auto=format&fit=crop&w=1080&q=80';
-
 type SortOption =
-  | 'priceAsc'
-  | 'priceDesc'
-  | 'typeAsc'
-  | 'availableAsc'
-  | 'availableDesc'
-  | 'soldAsc'
-  | 'soldDesc'
-  | 'dateAsc'
-  | 'dateDesc'
-  | 'createdDesc';
+  | "priceAsc"
+  | "priceDesc"
+  | "typeAsc"
+  | "availableAsc"
+  | "availableDesc"
+  | "soldAsc"
+  | "soldDesc"
+  | "dateAsc"
+  | "dateDesc"
+  | "createdDesc";
 
-function getEventStats(event: EventsPageEvent) {
+const fallbackImage =
+  "https://images.unsplash.com/photo-1523580494863-6f3031224c94?auto=format&fit=crop&w=1080&q=80";
+
+function getEventStats(event: ArchiveEvent) {
   const minTicketPrice = event.ticketTypes.length
     ? Math.min(...event.ticketTypes.map((ticket) => Number(ticket.price)))
     : event.ticketPrice ?? 0;
@@ -89,43 +88,40 @@ function getEventStats(event: EventsPageEvent) {
   };
 }
 
-export function Events() {
-  const [events, setEvents] = useState<EventsPageEvent[]>([]);
+export function ArchiveEvents() {
+  const [events, setEvents] = useState<ArchiveEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<SortOption>('dateAsc');
-  const [priceFrom, setPriceFrom] = useState('');
-  const [priceTo, setPriceTo] = useState('');
-  const [availableFrom, setAvailableFrom] = useState('');
-  const [availableTo, setAvailableTo] = useState('');
-  const [soldFrom, setSoldFrom] = useState('');
-  const [soldTo, setSoldTo] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('Wszystkie');
-  const [locationFilter, setLocationFilter] = useState('Wszystkie');
+  const [sortBy, setSortBy] = useState<SortOption>("dateAsc");
+  const [priceFrom, setPriceFrom] = useState("");
+  const [priceTo, setPriceTo] = useState("");
+  const [availableFrom, setAvailableFrom] = useState("");
+  const [availableTo, setAvailableTo] = useState("");
+  const [soldFrom, setSoldFrom] = useState("");
+  const [soldTo, setSoldTo] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("Wszystkie");
+  const [locationFilter, setLocationFilter] = useState("Wszystkie");
 
   useEffect(() => {
     let mounted = true;
-
     const loadEvents = async () => {
       try {
         setIsLoading(true);
         setError(null);
-
-        const response = await fetch('/api/events');
+        const response = await fetch("/api/events");
         if (!response.ok) {
           throw new Error(`Nie udało się pobrać wydarzeń (${response.status})`);
         }
-
         const data = (await response.json()) as ApiEvent[];
-        const mappedEvents: EventsPageEvent[] = data.map((event) => ({
+        const mappedEvents: ArchiveEvent[] = data.map((event) => ({
           id: String(event.id),
           title: event.title,
-          category: event.category || 'Inne',
+          category: event.category || "Inne",
           date: event.date,
           createdAt: event.created_at || event.date,
-          creatorUsername: event.creator_username || 'Nieznany uzytkownik',
-          city: event.city || '',
-          venue: event.venue || event.location || 'Brak lokalizacji',
+          creatorUsername: event.creator_username || "Nieznany użytkownik",
+          city: event.city || "",
+          venue: event.venue || event.location || "Brak lokalizacji",
           image: event.image_url || event.image || fallbackImage,
           ticketTypes: event.ticketTypes || [],
           ticketPrice:
@@ -133,13 +129,12 @@ export function Events() {
               ? null
               : Number(event.ticket_price),
         }));
-
         if (mounted) {
           setEvents(mappedEvents);
         }
       } catch (err) {
         if (mounted) {
-          setError(err instanceof Error ? err.message : 'Wystąpił nieznany błąd');
+          setError(err instanceof Error ? err.message : "Wystąpił nieznany błąd");
           setEvents([]);
         }
       } finally {
@@ -148,7 +143,6 @@ export function Events() {
         }
       }
     };
-
     loadEvents();
     return () => {
       mounted = false;
@@ -157,68 +151,50 @@ export function Events() {
 
   const categories = useMemo(() => {
     const now = Date.now();
-    const upcoming = events.filter((event) => {
+    const archived = events.filter((event) => {
       const eventTime = Date.parse(event.date);
-      return !Number.isNaN(eventTime) && eventTime >= now;
+      return !Number.isNaN(eventTime) && eventTime < now;
     });
-    const unique = [...new Set(upcoming.map((event) => event.category))];
-    return ['Wszystkie', ...unique];
+    const unique = [...new Set(archived.map((event) => event.category))];
+    return ["Wszystkie", ...unique];
   }, [events]);
 
   const locations = useMemo(() => {
     const now = Date.now();
-    const upcoming = events.filter((event) => {
+    const archived = events.filter((event) => {
       const eventTime = Date.parse(event.date);
-      return !Number.isNaN(eventTime) && eventTime >= now;
+      return !Number.isNaN(eventTime) && eventTime < now;
     });
-    const unique = [...new Set(upcoming.map((event) => event.city || 'Brak miasta').filter(Boolean))];
-    return ['Wszystkie', ...unique];
+    const unique = [...new Set(archived.map((event) => event.city || "Brak miasta").filter(Boolean))];
+    return ["Wszystkie", ...unique];
   }, [events]);
 
-  useEffect(() => {
-    if (!categories.includes(categoryFilter)) {
-      setCategoryFilter('Wszystkie');
-    }
-  }, [categories, categoryFilter]);
-
-  useEffect(() => {
-    if (!locations.includes(locationFilter)) {
-      setLocationFilter('Wszystkie');
-    }
-  }, [locations, locationFilter]);
-
   const processedEvents = useMemo(() => {
-    const priceFromNumber = priceFrom === '' ? null : Number(priceFrom);
-    const priceToNumber = priceTo === '' ? null : Number(priceTo);
-    const availableFromNumber = availableFrom === '' ? null : Number(availableFrom);
-    const availableToNumber = availableTo === '' ? null : Number(availableTo);
-    const soldFromNumber = soldFrom === '' ? null : Number(soldFrom);
-    const soldToNumber = soldTo === '' ? null : Number(soldTo);
-
+    const priceFromNumber = priceFrom === "" ? null : Number(priceFrom);
+    const priceToNumber = priceTo === "" ? null : Number(priceTo);
+    const availableFromNumber = availableFrom === "" ? null : Number(availableFrom);
+    const availableToNumber = availableTo === "" ? null : Number(availableTo);
+    const soldFromNumber = soldFrom === "" ? null : Number(soldFrom);
+    const soldToNumber = soldTo === "" ? null : Number(soldTo);
     const now = Date.now();
+
     const filtered = events.filter((event) => {
       const eventTime = Date.parse(event.date);
-      const isUpcoming = !Number.isNaN(eventTime) && eventTime >= now;
-      if (!isUpcoming) {
+      const isArchived = !Number.isNaN(eventTime) && eventTime < now;
+      if (!isArchived) {
         return false;
       }
-
       const stats = getEventStats(event);
-      const matchesCategory =
-        categoryFilter === 'Wszystkie' || event.category === categoryFilter;
-      const matchesLocation =
-        locationFilter === 'Wszystkie' || (event.city || 'Brak miasta') === locationFilter;
-      const matchesPriceFrom =
-        priceFromNumber === null || stats.minTicketPrice >= priceFromNumber;
+      const matchesCategory = categoryFilter === "Wszystkie" || event.category === categoryFilter;
+      const matchesLocation = locationFilter === "Wszystkie" || (event.city || "Brak miasta") === locationFilter;
+      const matchesPriceFrom = priceFromNumber === null || stats.minTicketPrice >= priceFromNumber;
       const matchesPriceTo = priceToNumber === null || stats.minTicketPrice <= priceToNumber;
       const matchesAvailableFrom =
         availableFromNumber === null || stats.totalTicketsCount >= availableFromNumber;
       const matchesAvailableTo =
         availableToNumber === null || stats.totalTicketsCount <= availableToNumber;
-      const matchesSoldFrom =
-        soldFromNumber === null || stats.totalSoldCount >= soldFromNumber;
+      const matchesSoldFrom = soldFromNumber === null || stats.totalSoldCount >= soldFromNumber;
       const matchesSoldTo = soldToNumber === null || stats.totalSoldCount <= soldToNumber;
-
       return (
         matchesCategory &&
         matchesLocation &&
@@ -238,28 +214,27 @@ export function Events() {
       const bDate = Date.parse(b.date);
       const aCreated = Date.parse(a.createdAt);
       const bCreated = Date.parse(b.createdAt);
-      const now = Date.now();
 
       switch (sortBy) {
-        case 'priceAsc':
+        case "priceAsc":
           return aStats.minTicketPrice - bStats.minTicketPrice;
-        case 'priceDesc':
+        case "priceDesc":
           return bStats.minTicketPrice - aStats.minTicketPrice;
-        case 'typeAsc':
-          return a.category.localeCompare(b.category, 'pl');
-        case 'availableAsc':
+        case "typeAsc":
+          return a.category.localeCompare(b.category, "pl");
+        case "availableAsc":
           return aStats.totalTicketsCount - bStats.totalTicketsCount;
-        case 'availableDesc':
+        case "availableDesc":
           return bStats.totalTicketsCount - aStats.totalTicketsCount;
-        case 'soldAsc':
+        case "soldAsc":
           return aStats.totalSoldCount - bStats.totalSoldCount;
-        case 'soldDesc':
+        case "soldDesc":
           return bStats.totalSoldCount - aStats.totalSoldCount;
-        case 'dateAsc':
+        case "dateAsc":
           return Math.abs((Number.isNaN(aDate) ? 0 : aDate) - now) - Math.abs((Number.isNaN(bDate) ? 0 : bDate) - now);
-        case 'dateDesc':
+        case "dateDesc":
           return Math.abs((Number.isNaN(bDate) ? 0 : bDate) - now) - Math.abs((Number.isNaN(aDate) ? 0 : aDate) - now);
-        case 'createdDesc':
+        case "createdDesc":
           return (Number.isNaN(bCreated) ? 0 : bCreated) - (Number.isNaN(aCreated) ? 0 : aCreated);
         default:
           return 0;
@@ -282,8 +257,8 @@ export function Events() {
     <div className="min-h-screen bg-gray-50">
       <div className="bg-[#041f14] text-white py-16">
         <div className="container mx-auto px-4">
-          <h1 className="text-5xl mb-4">Wszystkie wydarzenia</h1>
-          <p className="text-xl opacity-90">Przeglądaj pełną listę i wybierz coś dla siebie.</p>
+          <h1 className="text-5xl mb-4">Archiwum wydarzeń</h1>
+          <p className="text-xl opacity-90">Wydarzenia, które już się odbyły.</p>
         </div>
       </div>
 
@@ -295,16 +270,16 @@ export function Events() {
               onChange={(e) => setSortBy(e.target.value as SortOption)}
               className="border rounded-md px-3 py-2"
             >
-              <option value="dateAsc">Data: od najblizszych</option>
+              <option value="dateAsc">Data: od najbliższych</option>
               <option value="dateDesc">Data: od najdalszych w czasie</option>
               <option value="createdDesc">Ostatnio dodane</option>
-              <option value="priceAsc">Cena biletu: rosnaco</option>
-              <option value="priceDesc">Cena biletu: malejaco</option>
+              <option value="priceAsc">Cena biletu: rosnąco</option>
+              <option value="priceDesc">Cena biletu: malejąco</option>
               <option value="typeAsc">Rodzaj: alfabetycznie</option>
-              <option value="availableAsc">Dostepne bilety: rosnaco</option>
-              <option value="availableDesc">Dostepne bilety: malejaco</option>
-              <option value="soldAsc">Sprzedane bilety: rosnaco</option>
-              <option value="soldDesc">Sprzedane bilety: malejaco</option>
+              <option value="availableAsc">Dostępne bilety: rosnąco</option>
+              <option value="availableDesc">Dostępne bilety: malejąco</option>
+              <option value="soldAsc">Sprzedane bilety: rosnąco</option>
+              <option value="soldDesc">Sprzedane bilety: malejąco</option>
             </select>
             <select
               value={categoryFilter}
@@ -350,7 +325,7 @@ export function Events() {
               type="number"
               min="0"
               step="1"
-              placeholder="Dostepne bilety od"
+              placeholder="Dostępne bilety od"
               value={availableFrom}
               onChange={(e) => setAvailableFrom(e.target.value)}
               className="border rounded-md px-3 py-2"
@@ -359,7 +334,7 @@ export function Events() {
               type="number"
               min="0"
               step="1"
-              placeholder="Dostepne bilety do"
+              placeholder="Dostępne bilety do"
               value={availableTo}
               onChange={(e) => setAvailableTo(e.target.value)}
               className="border rounded-md px-3 py-2"
@@ -385,15 +360,15 @@ export function Events() {
             <Button
               variant="outline"
               onClick={() => {
-                setSortBy('dateAsc');
-                setCategoryFilter('Wszystkie');
-                setLocationFilter('Wszystkie');
-                setPriceFrom('');
-                setPriceTo('');
-                setAvailableFrom('');
-                setAvailableTo('');
-                setSoldFrom('');
-                setSoldTo('');
+                setSortBy("dateAsc");
+                setCategoryFilter("Wszystkie");
+                setLocationFilter("Wszystkie");
+                setPriceFrom("");
+                setPriceTo("");
+                setAvailableFrom("");
+                setAvailableTo("");
+                setSoldFrom("");
+                setSoldTo("");
               }}
             >
               Wyczyść filtry
@@ -418,24 +393,19 @@ export function Events() {
             !error &&
             processedEvents.map((event) => {
               const { minTicketPrice, totalTicketsCount, totalSoldCount } = getEventStats(event);
-
               const eventDate = new Date(event.date);
               const createdDate = new Date(event.createdAt);
               const timeLabel = Number.isNaN(eventDate.getTime())
-                ? 'Brak godziny'
-                : eventDate.toLocaleTimeString('pl-PL', {
-                    hour: '2-digit',
-                    minute: '2-digit',
+                ? "Brak godziny"
+                : eventDate.toLocaleTimeString("pl-PL", {
+                    hour: "2-digit",
+                    minute: "2-digit",
                   });
 
               return (
-                <Card key={event.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                <Card key={event.id} className="overflow-hidden">
                   <div className="aspect-[16/9] overflow-hidden">
-                    <img
-                      src={event.image}
-                      alt={event.title}
-                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                    />
+                    <img src={event.image} alt={event.title} className="w-full h-full object-cover" />
                   </div>
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between mb-3">
@@ -451,16 +421,16 @@ export function Events() {
                         ? "brak daty"
                         : createdDate.toLocaleDateString("pl-PL")}
                     </p>
-                    <div className="space-y-2 text-sm text-gray-600">
+                    <div className="space-y-2 text-sm text-gray-600 mb-4">
                       <div className="flex items-center gap-2">
                         <Calendar className="size-4" />
                         {Number.isNaN(eventDate.getTime())
-                          ? 'Brak daty'
-                          : eventDate.toLocaleDateString('pl-PL', {
-                              weekday: 'short',
-                              month: 'short',
-                              day: 'numeric',
-                              year: 'numeric',
+                          ? "Brak daty"
+                          : eventDate.toLocaleDateString("pl-PL", {
+                              weekday: "short",
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
                             })}
                       </div>
                       <div className="flex items-center gap-2">
@@ -472,12 +442,26 @@ export function Events() {
                         {event.city ? `${event.venue}, ${event.city}` : event.venue}
                       </div>
                     </div>
+
+                    <div className="rounded-md border p-3">
+                      <p className="text-sm font-medium mb-2">Bilety i ceny</p>
+                      <div className="space-y-1 text-sm">
+                        {event.ticketTypes.length > 0 ? (
+                          event.ticketTypes.map((ticket) => (
+                            <div key={String(ticket.id)} className="flex justify-between gap-3">
+                              <span>{ticket.name || "Bilet"}</span>
+                              <span>{Number(ticket.price)} zł</span>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="flex justify-between gap-3">
+                            <span>Bilet</span>
+                            <span>{event.ticketPrice ?? 0} zł</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </CardContent>
-                  <CardFooter className="p-6 pt-0">
-                    <Link to={`/event/${event.id}`} className="w-full">
-                      <Button className="w-full">Sprawdź więcej</Button>
-                    </Link>
-                  </CardFooter>
                 </Card>
               );
             })}
@@ -485,7 +469,7 @@ export function Events() {
 
         {!isLoading && !error && processedEvents.length === 0 && (
           <div className="text-center py-16">
-            <p className="text-gray-500 text-lg">Brak wydarzeń dla wybranych filtrow.</p>
+            <p className="text-gray-500 text-lg">Brak wydarzeń archiwalnych dla wybranych filtrów.</p>
           </div>
         )}
       </div>

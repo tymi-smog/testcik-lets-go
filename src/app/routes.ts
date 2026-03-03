@@ -3,6 +3,7 @@ import { createBrowserRouter } from "react-router-dom";
 import { Root } from "./pages/Root";
 import { Home } from "./pages/Home";
 import { Events } from "./pages/events";
+import { ArchiveEvents } from "./pages/ArchiveEvents";
 import { EventDetail } from "./pages/EventDetail";
 import { Checkout } from "./pages/Checkout";
 
@@ -23,6 +24,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, Component: Home },
       { path: "events", Component: Events },
+      { path: "events-archive", Component: ArchiveEvents },
 
       { path: "event/:id", Component: EventDetail },
       { path: "checkout", Component: Checkout },
