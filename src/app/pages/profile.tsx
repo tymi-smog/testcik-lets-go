@@ -53,12 +53,19 @@ export function Profile() {
         </div>
 
         <div className="pt-4 border-t">
-      <button
-        onClick={() => navigate("/forgot-password")}
-        className="px-4 py-2 border rounded-md"
-      >
-        Zmień hasło
-      </button>
+<button
+  onClick={() => navigate("/forgot-password")}
+  className="
+    px-4 py-2 
+    border rounded-md 
+    hover:bg-gray-100 
+    hover:shadow-sm
+    active:scale-95
+    transition-all duration-200
+  "
+>
+  Zmień hasło
+</button>
         </div>
       </div>
     </div>
