@@ -23,6 +23,8 @@ type ApiEvent = {
   created_at?: string | null;
   creator_username?: string | null;
   location?: string | null;
+  city?: string | null;
+  venue?: string | null;
   image_url?: string | null;
   image?: string | null;
   description?: string | null;
@@ -44,7 +46,8 @@ type EventDetailData = {
   date: string;
   createdAt: string;
   creatorUsername: string;
-  location: string;
+  city: string;
+  venue: string;
   image: string;
   description: string;
   ticketTypes: EventTicket[];
@@ -101,7 +104,8 @@ export function EventDetail() {
           date: rawEvent.date,
           createdAt: rawEvent.created_at || rawEvent.date,
           creatorUsername: rawEvent.creator_username || "Nieznany uzytkownik",
-          location: rawEvent.location || "Brak lokalizacji",
+          city: rawEvent.city || "",
+          venue: rawEvent.venue || rawEvent.location || "Brak lokalizacji",
           image: rawEvent.image_url || rawEvent.image || fallbackImage,
           description: rawEvent.description || "Brak opisu wydarzenia.",
           ticketTypes: (rawEvent.ticketTypes || []).map((ticket) => ({
@@ -293,7 +297,7 @@ export function EventDetail() {
                   <MapPin className="size-5 text-blue-600" />
                   <div>
                     <p className="text-sm text-gray-600">Miejsce</p>
-                    <p>{event.location}</p>
+                    <p>{event.city ? `${event.venue}, ${event.city}` : event.venue}</p>
                   </div>
                 </div>
               </CardContent>

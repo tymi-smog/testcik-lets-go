@@ -19,6 +19,8 @@ type ApiEvent = {
   created_at?: string | null;
   creator_username?: string | null;
   location?: string | null;
+  city?: string | null;
+  venue?: string | null;
   image_url?: string | null;
   image?: string | null;
   ticket_price?: number | string | null;
@@ -33,7 +35,8 @@ type HomeEvent = {
   createdAt: number;
   createdAtRaw: string;
   creatorUsername: string;
-  location: string;
+  city: string;
+  venue: string;
   image: string;
   ticketTypes: ApiTicketType[];
   ticketPrice: number | null;
@@ -70,7 +73,8 @@ export function Home() {
           createdAt: Date.parse(event.created_at || event.date || ""),
           createdAtRaw: event.created_at || event.date,
           creatorUsername: event.creator_username || "Nieznany uzytkownik",
-          location: event.location || "Brak lokalizacji",
+          city: event.city || "",
+          venue: event.venue || event.location || "Brak lokalizacji",
           image: event.image_url || event.image || fallbackImage,
           ticketTypes: event.ticketTypes || [],
           ticketPrice:
@@ -231,7 +235,7 @@ export function Home() {
                       </div>
                       <div className="flex items-center gap-2">
                         <MapPin className="size-4" />
-                        {event.location}
+                        {event.city ? `${event.venue}, ${event.city}` : event.venue}
                       </div>
                     </div>
                   </CardContent>

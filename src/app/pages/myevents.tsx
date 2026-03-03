@@ -9,6 +9,8 @@ type MyEvent = {
   description?: string | null;
   date: string;
   location?: string | null;
+  city?: string | null;
+  venue?: string | null;
   created_at?: string | null;
   creator_id?: number | string | null;
   creator_username?: string | null;
@@ -81,7 +83,8 @@ export function MyEvents() {
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [location, setLocation] = useState("");
+  const [city, setCity] = useState("");
+  const [venue, setVenue] = useState("");
   const [date, setDate] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [ticketTypes, setTicketTypes] = useState<TicketDraft[]>([
@@ -145,7 +148,7 @@ export function MyEvents() {
 
   const locations = useMemo(() => {
     const unique = [
-      ...new Set(events.map((event) => event.location || "Brak lokalizacji").filter(Boolean)),
+      ...new Set(events.map((event) => event.city || "Brak miasta").filter(Boolean)),
     ];
     return ["Wszystkie", ...unique];
   }, [events]);
@@ -173,7 +176,7 @@ export function MyEvents() {
     const filtered = events.filter((event) => {
       const stats = getMyEventStats(event);
       const category = event.category || "Inne";
-      const location = event.location || "Brak lokalizacji";
+      const location = event.city || "Brak miasta";
       const matchesCategory = categoryFilter === "Wszystkie" || category === categoryFilter;
       const matchesLocation = locationFilter === "Wszystkie" || location === locationFilter;
       const matchesPriceFrom = priceFromNumber === null || stats.minTicketPrice >= priceFromNumber;
@@ -267,11 +270,12 @@ export function MyEvents() {
     () =>
       !!title.trim() &&
       !!description.trim() &&
-      !!location.trim() &&
+      !!city.trim() &&
+      !!venue.trim() &&
       !!date &&
       !!token &&
       hasValidTickets,
-    [title, description, location, date, token, hasValidTickets]
+    [title, description, city, venue, date, token, hasValidTickets]
   );
 
   function addTicketRow() {
@@ -297,7 +301,18 @@ export function MyEvents() {
     setEditingEventId(String(event.id));
     setTitle(event.title || "");
     setDescription(event.description || "");
-    setLocation(event.location || "");
+    const fallbackLocation = String(event.location || "");
+    if (event.city || event.venue) {
+      setCity(event.city || "");
+      setVenue(event.venue || fallbackLocation);
+    } else if (fallbackLocation.includes(",")) {
+      const split = fallbackLocation.split(",");
+      setVenue(split.slice(0, split.length - 1).join(",").trim());
+      setCity(split[split.length - 1].trim());
+    } else {
+      setVenue(fallbackLocation);
+      setCity("");
+    }
 
     const eventDate = event.date ? new Date(event.date) : null;
     if (eventDate && !Number.isNaN(eventDate.getTime())) {
@@ -324,7 +339,8 @@ export function MyEvents() {
     setEditingEventId(null);
     setTitle("");
     setDescription("");
-    setLocation("");
+    setCity("");
+    setVenue("");
     setDate("");
     setImageUrl("");
     setTicketTypes([{ name: "", price: "", available: "", description: "" }]);
@@ -353,7 +369,8 @@ export function MyEvents() {
         body: JSON.stringify({
           title,
           description,
-          location,
+          city,
+          venue,
           date,
           imageUrl,
           ticketTypes: ticketTypes.map((ticket) => ({
@@ -447,9 +464,18 @@ export function MyEvents() {
 
           <input
             type="text"
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
-            placeholder="Lokalizacja"
+            value={venue}
+            onChange={(e) => setVenue(e.target.value)}
+            placeholder="Lokalizacja (np. AmberExpo)"
+            className="w-full border rounded-md p-2"
+            required
+          />
+
+          <input
+            type="text"
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+            placeholder="Miasto"
             className="w-full border rounded-md p-2"
             required
           />
@@ -699,7 +725,9 @@ export function MyEvents() {
                     <p className="text-sm text-gray-600">
                       Od {minTicketPrice} zł | Łącznie biletów: {totalTicketsCount} | Sprzedane: {totalSoldCount}
                     </p>
-                    <p className="text-sm text-gray-600">{event.location || "Brak lokalizacji"}</p>
+                    <p className="text-sm text-gray-600">
+                      {event.city ? `${event.venue || event.location}, ${event.city}` : event.venue || event.location || "Brak lokalizacji"}
+                    </p>
                     {user.is_admin && (
                       <p className="text-xs text-gray-500">
                         Autor: {event.creator_username || "Nieznany"} (ID: {event.creator_id ?? "?"})

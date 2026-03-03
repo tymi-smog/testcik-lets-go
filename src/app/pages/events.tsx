@@ -22,6 +22,8 @@ type ApiEvent = {
   created_at?: string | null;
   creator_username?: string | null;
   location?: string | null;
+  city?: string | null;
+  venue?: string | null;
   image_url?: string | null;
   image?: string | null;
   ticket_price?: number | string | null;
@@ -35,7 +37,8 @@ type EventsPageEvent = {
   date: string;
   createdAt: string;
   creatorUsername: string;
-  location: string;
+  city: string;
+  venue: string;
   image: string;
   ticketTypes: ApiTicketType[];
   ticketPrice: number | null;
@@ -121,7 +124,8 @@ export function Events() {
           date: event.date,
           createdAt: event.created_at || event.date,
           creatorUsername: event.creator_username || 'Nieznany uzytkownik',
-          location: event.location || 'Brak lokalizacji',
+          city: event.city || '',
+          venue: event.venue || event.location || 'Brak lokalizacji',
           image: event.image_url || event.image || fallbackImage,
           ticketTypes: event.ticketTypes || [],
           ticketPrice:
@@ -157,7 +161,7 @@ export function Events() {
   }, [events]);
 
   const locations = useMemo(() => {
-    const unique = [...new Set(events.map((event) => event.location).filter(Boolean))];
+    const unique = [...new Set(events.map((event) => event.city || 'Brak miasta').filter(Boolean))];
     return ['Wszystkie', ...unique];
   }, [events]);
 
@@ -186,7 +190,7 @@ export function Events() {
       const matchesCategory =
         categoryFilter === 'Wszystkie' || event.category === categoryFilter;
       const matchesLocation =
-        locationFilter === 'Wszystkie' || event.location === locationFilter;
+        locationFilter === 'Wszystkie' || (event.city || 'Brak miasta') === locationFilter;
       const matchesPriceFrom =
         priceFromNumber === null || stats.minTicketPrice >= priceFromNumber;
       const matchesPriceTo = priceToNumber === null || stats.minTicketPrice <= priceToNumber;
@@ -448,7 +452,7 @@ export function Events() {
                       </div>
                       <div className="flex items-center gap-2">
                         <MapPin className="size-4" />
-                        {event.location}
+                        {event.city ? `${event.venue}, ${event.city}` : event.venue}
                       </div>
                     </div>
                   </CardContent>

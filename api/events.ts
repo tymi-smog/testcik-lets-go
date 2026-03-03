@@ -8,6 +8,8 @@ type EventRow = {
   title: string;
   description?: string | null;
   location?: string | null;
+  city?: string | null;
+  venue?: string | null;
   date: string;
   ticket_price?: number | string | null;
   available_tickets?: number | string | null;
@@ -30,6 +32,31 @@ function parseRequestBody(body: unknown): any {
   return body ?? {};
 }
 
+function parseLocationParts(input: { city?: string; venue?: string; location?: string }) {
+  const city = String(input.city ?? "").trim();
+  const venue = String(input.venue ?? "").trim();
+  const location = String(input.location ?? "").trim();
+
+  if (city && venue) {
+    return { city, venue };
+  }
+
+  if (location.includes(",")) {
+    const split = location.split(",");
+    const parsedVenue = split.slice(0, split.length - 1).join(",").trim();
+    const parsedCity = split[split.length - 1].trim();
+    return {
+      city: city || parsedCity,
+      venue: venue || parsedVenue,
+    };
+  }
+
+  return {
+    city,
+    venue: venue || location,
+  };
+}
+
 export default async function handler(req: any, res: any) {
   if (req.method === "GET") {
     try {
@@ -42,6 +69,8 @@ export default async function handler(req: any, res: any) {
       const columnNames = new Set(columns.map((column: any) => String(column.column_name)));
       const hasImage = columnNames.has("image");
       const hasImageUrl = columnNames.has("image_url");
+      const hasCity = columnNames.has("city");
+      const hasVenue = columnNames.has("venue");
 
       let events: EventRow[] = [];
 
@@ -103,6 +132,35 @@ export default async function handler(req: any, res: any) {
           ORDER BY events.date ASC
         `;
       }
+
+      let eventLocationRows: Array<{ id: number | string; city?: string | null; venue?: string | null }> = [];
+      if (hasCity || hasVenue) {
+        if (hasCity && hasVenue) {
+          eventLocationRows = await sql`
+            SELECT id, city, venue
+            FROM events
+          `;
+        } else if (hasCity) {
+          eventLocationRows = await sql`
+            SELECT id, city, NULL::text AS venue
+            FROM events
+          `;
+        } else {
+          eventLocationRows = await sql`
+            SELECT id, NULL::text AS city, venue
+            FROM events
+          `;
+        }
+      }
+      const eventLocationMap = new Map(
+        eventLocationRows.map((row) => [
+          Number(row.id),
+          {
+            city: row.city ?? null,
+            venue: row.venue ?? null,
+          },
+        ])
+      );
 
       let userMap = new Map<number, string>();
       try {
@@ -212,6 +270,12 @@ export default async function handler(req: any, res: any) {
 
         return {
           ...event,
+          city: eventLocationMap.get(Number(event.id))?.city ?? null,
+          venue: eventLocationMap.get(Number(event.id))?.venue ?? null,
+          location:
+            (eventLocationMap.get(Number(event.id))?.venue && eventLocationMap.get(Number(event.id))?.city)
+              ? `${eventLocationMap.get(Number(event.id))?.venue}, ${eventLocationMap.get(Number(event.id))?.city}`
+              : eventLocationMap.get(Number(event.id))?.venue || event.location || null,
           creator_username: userMap.get(Number(event.creator_id)) ?? null,
           image_url: event.image_url || null,
           image: event.image_url || `https://picsum.photos/seed/event-${event.id}/1200/675`,
@@ -236,7 +300,14 @@ export default async function handler(req: any, res: any) {
       const body = parseRequestBody(req.body);
       const title = String(body?.title ?? "").trim();
       const description = String(body?.description ?? "").trim();
-      const location = String(body?.location ?? "").trim();
+      const parsedLocation = parseLocationParts({
+        city: body?.city,
+        venue: body?.venue,
+        location: body?.location,
+      });
+      const city = parsedLocation.city;
+      const venue = parsedLocation.venue;
+      const location = city && venue ? `${venue}, ${city}` : venue;
       const date = String(body?.date ?? "").trim();
       const imageUrl = String(body?.imageUrl ?? "").trim();
       const rawTicketTypes = Array.isArray(body?.ticketTypes) ? body.ticketTypes : [];
@@ -247,7 +318,7 @@ export default async function handler(req: any, res: any) {
         description: String(ticket?.description ?? "").trim(),
       }));
 
-      if (!title || !description || !location || !date) {
+      if (!title || !description || !venue || !city || !date) {
         return res.status(400).json({ error: "Missing required fields" });
       }
       if (ticketTypes.length === 0) {
@@ -306,6 +377,8 @@ export default async function handler(req: any, res: any) {
       const columnNames = new Set(columns.map((column: any) => String(column.column_name)));
       const hasImage = columnNames.has("image");
       const hasImageUrl = columnNames.has("image_url");
+      const hasCity = columnNames.has("city");
+      const hasVenue = columnNames.has("venue");
 
       let createdEvent: any[] = [];
       let eventId: number | null = null;
@@ -392,6 +465,28 @@ export default async function handler(req: any, res: any) {
         return res.status(500).json({ error: "Event created without id" });
       }
 
+      if (hasCity || hasVenue) {
+        if (hasCity && hasVenue) {
+          await sql`
+            UPDATE events
+            SET city = ${city}, venue = ${venue}
+            WHERE id = ${eventId}
+          `;
+        } else if (hasCity) {
+          await sql`
+            UPDATE events
+            SET city = ${city}
+            WHERE id = ${eventId}
+          `;
+        } else {
+          await sql`
+            UPDATE events
+            SET venue = ${venue}
+            WHERE id = ${eventId}
+          `;
+        }
+      }
+
       const ticketColumns = await sql`
         SELECT column_name
         FROM information_schema.columns
@@ -459,7 +554,14 @@ export default async function handler(req: any, res: any) {
       const body = parseRequestBody(req.body);
       const title = String(body?.title ?? "").trim();
       const description = String(body?.description ?? "").trim();
-      const location = String(body?.location ?? "").trim();
+      const parsedLocation = parseLocationParts({
+        city: body?.city,
+        venue: body?.venue,
+        location: body?.location,
+      });
+      const city = parsedLocation.city;
+      const venue = parsedLocation.venue;
+      const location = city && venue ? `${venue}, ${city}` : venue;
       const date = String(body?.date ?? "").trim();
       const imageUrl = String(body?.imageUrl ?? "").trim();
       const rawTicketTypes = Array.isArray(body?.ticketTypes) ? body.ticketTypes : [];
@@ -470,7 +572,7 @@ export default async function handler(req: any, res: any) {
         description: String(ticket?.description ?? "").trim(),
       }));
 
-      if (!title || !description || !location || !date) {
+      if (!title || !description || !venue || !city || !date) {
         return res.status(400).json({ error: "Missing required fields" });
       }
       if (ticketTypes.length === 0) {
@@ -521,6 +623,8 @@ export default async function handler(req: any, res: any) {
       const eventColumnNames = new Set(eventColumns.map((column: any) => String(column.column_name)));
       const hasImage = eventColumnNames.has("image");
       const hasImageUrl = eventColumnNames.has("image_url");
+      const hasCity = eventColumnNames.has("city");
+      const hasVenue = eventColumnNames.has("venue");
 
       if (hasImage) {
         await sql`
@@ -560,6 +664,28 @@ export default async function handler(req: any, res: any) {
             available_tickets = ${availableTickets}
           WHERE id = ${idFromQuery}
         `;
+      }
+
+      if (hasCity || hasVenue) {
+        if (hasCity && hasVenue) {
+          await sql`
+            UPDATE events
+            SET city = ${city}, venue = ${venue}
+            WHERE id = ${idFromQuery}
+          `;
+        } else if (hasCity) {
+          await sql`
+            UPDATE events
+            SET city = ${city}
+            WHERE id = ${idFromQuery}
+          `;
+        } else {
+          await sql`
+            UPDATE events
+            SET venue = ${venue}
+            WHERE id = ${idFromQuery}
+          `;
+        }
       }
 
       const ticketColumns = await sql`
