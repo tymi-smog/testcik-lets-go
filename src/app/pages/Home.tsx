@@ -53,7 +53,7 @@ export function Home() {
 
         const response = await fetch('/api/events');
         if (!response.ok) {
-          throw new Error(`Nie udaĹ‚o siÄ™ pobraÄ‡ wydarzeĹ„ (${response.status})`);
+          throw new Error(`Nie udało się pobrać wydarzeń (${response.status})`);
         }
 
         const data = (await response.json()) as ApiEvent[];
@@ -77,7 +77,7 @@ export function Home() {
         }
       } catch (err) {
         if (mounted) {
-          setError(err instanceof Error ? err.message : 'WystÄ…piĹ‚ nieznany bĹ‚Ä…d');
+          setError(err instanceof Error ? err.message : 'Wystąpił nieznany błąd');
           setEvents([]);
         }
       } finally {
@@ -127,10 +127,10 @@ export function Home() {
       <div className="bg-[#041f14] text-white py-16">
         <div className="container mx-auto px-4">
           <h1 className="text-5xl mb-4">Najnowsze wydarzenia</h1>
-          <p className="text-xl opacity-90">Zobacz 10 ostatnio dodanych wydarzeĹ„.</p>
+          <p className="text-xl opacity-90">Zobacz 10 ostatnio dodanych wydarzeń.</p>
           <div className="mt-6">
             <Link to="/events">
-              <Button variant="secondary">PrzeglÄ…daj wszystkie wydarzenia</Button>
+              <Button variant="secondary">Przeglądaj wszystkie wydarzenia</Button>
             </Link>
           </div>
         </div>
@@ -152,7 +152,7 @@ export function Home() {
 
         {isLoading && (
           <div className="text-center py-16">
-            <p className="text-gray-500 text-lg">Ĺadowanie wydarzeĹ„...</p>
+            <p className="text-gray-500 text-lg">Ładowanie wydarzeń...</p>
           </div>
         )}
 
@@ -190,7 +190,7 @@ export function Home() {
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between mb-3">
                       <Badge>{event.category}</Badge>
-                      <span className="text-sm text-gray-600">Od {minTicketPrice ?? 0} zĹ‚</span>
+                      <span className="text-sm text-gray-600">Od {minTicketPrice ?? 0} zł</span>
                     </div>
                     <h3 className="text-xl mb-3">{event.title}</h3>
                     <div className="space-y-2 text-sm text-gray-600">
@@ -217,7 +217,7 @@ export function Home() {
                   </CardContent>
                   <CardFooter className="p-6 pt-0">
                     <Link to={`/event/${event.id}`} className="w-full">
-                      <Button className="w-full">SprawdĹş wiÄ™cej</Button>
+                      <Button className="w-full">Sprawdź więcej</Button>
                     </Link>
                   </CardFooter>
                 </Card>
@@ -227,7 +227,7 @@ export function Home() {
 
         {!isLoading && !error && filteredEvents.length === 0 && (
           <div className="text-center py-16">
-            <p className="text-gray-500 text-lg">Brak wydarzeĹ„ w tej kategorii.</p>
+            <p className="text-gray-500 text-lg">Brak wydarzeń w tej kategorii.</p>
           </div>
         )}
       </div>
