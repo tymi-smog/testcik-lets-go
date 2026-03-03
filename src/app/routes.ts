@@ -2,7 +2,7 @@ import { createBrowserRouter } from "react-router-dom";
 
 import { Root } from "./pages/Root";
 import { Home } from "./pages/Home";
-import { Events } from "./pages/events";
+import { Events } from "./pages/Events";
 import { EventDetail } from "./pages/EventDetail";
 import { Checkout } from "./pages/Checkout";
 

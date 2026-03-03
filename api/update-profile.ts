@@ -85,7 +85,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const link = `${process.env.BASE_URL}/api/confirm-email-change?token=${changeToken}`;
 
     await resend.emails.send({
-      from: "PanBilecik <onboarding@resend.dev>",
+      from: "PanBilecik <register@panbilecik.eu>",
       to: email,
       subject: "Potwierdz zmiane emaila - PanBilecik",
       html: `
