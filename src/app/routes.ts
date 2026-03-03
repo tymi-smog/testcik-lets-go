@@ -14,6 +14,7 @@ import { MyEvents } from "./pages/myevents";
 import { VerifyEmail } from "./pages/VerifyEmail";
 import { ForgotPassword } from "./pages/ForgotPassword";
 import { ResetPassword } from "./pages/ResetPassword";
+import { EmailChangeSuccess } from "./pages/EmailChangeSuccess";
 
 export const router = createBrowserRouter([
   {
@@ -33,9 +34,10 @@ export const router = createBrowserRouter([
 
       { path: "verify-email", Component: VerifyEmail },
 
-      // 🔐 Reset hasła flow
+      // Reset hasla flow
       { path: "forgot-password", Component: ForgotPassword },
       { path: "reset-password", Component: ResetPassword },
+      { path: "email-change-success", Component: EmailChangeSuccess },
     ],
   },
 ]);

@@ -33,5 +33,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     WHERE id = ${user.id}
   `;
 
-  return res.redirect("/profile");
+  return res.redirect("/email-change-success");
 }
