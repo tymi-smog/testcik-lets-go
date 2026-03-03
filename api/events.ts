@@ -9,35 +9,51 @@ export default async function handler(req: any, res: any) {
     const events = await sql`
       SELECT 
         events.id,
+        events.creator_id,
+        events.category_id,
         events.title,
         events.description,
         events.location,
         events.date,
         events.ticket_price,
         events.available_tickets,
-        categories.name as category
+        events.created_at,
+        categories.name AS category
       FROM events
       LEFT JOIN categories ON events.category_id = categories.id
       ORDER BY events.date ASC
     `;
 
-    const ticketTypes = await sql`
-      SELECT 
-        id,
-        event_id,
-        name,
-        price,
-        available,
-        description
-      FROM ticket_types
-    `;
+    // ticket_types may not exist in every deployment schema;
+    // fallback to empty array to keep frontend stable.
+    let ticketTypes: any[] = [];
+    try {
+      ticketTypes = await sql`
+        SELECT 
+          id,
+          event_id,
+          name,
+          price,
+          available,
+          description
+        FROM ticket_types
+      `;
+    } catch (ticketTypesError) {
+      console.warn("ticket_types query skipped:", ticketTypesError);
+    }
 
-    const result = events.map((event: any) => ({
-      ...event,
-      ticketTypes: ticketTypes.filter(
-        (ticket: any) => ticket.event_id === event.id
-      ),
-    }));
+    const result = events.map((event: any) => {
+      const eventTicketTypes = ticketTypes.filter(
+        (ticket: any) => Number(ticket.event_id) === Number(event.id)
+      );
+
+      return {
+        ...event,
+        // image is optional in DB schema shared by user; frontend handles fallback.
+        image: null,
+        ticketTypes: eventTicketTypes,
+      };
+    });
 
     return res.status(200).json(result);
   } catch (error: any) {
