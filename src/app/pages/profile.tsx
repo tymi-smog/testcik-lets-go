@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 
 type User = {
   user_id: number;
@@ -10,6 +11,7 @@ type User = {
 };
 
 export function Profile() {
+  const { token, login } = useAuth();
   const [user, setUser] = useState<User | null>(null);
 
   const [username, setUsername] = useState("");
@@ -21,64 +23,107 @@ export function Profile() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
+    const storedToken = token ?? localStorage.getItem("token");
+    if (!storedToken) return;
 
     try {
-      const payload = JSON.parse(atob(token.split(".")[1]));
+      const payload = JSON.parse(atob(storedToken.split(".")[1]));
       setUser(payload);
       setUsername(payload.username);
       setEmail(payload.email);
     } catch {
       console.error("JWT decode error");
     }
-  }, []);
+  }, [token]);
+
+  async function refreshUser(storedToken: string) {
+    const response = await fetch("/api/me", {
+      headers: {
+        Authorization: `Bearer ${storedToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("Nie udalo sie odswiezyc danych uzytkownika");
+    }
+
+    const data = await response.json();
+    if (data?.user) {
+      setUser(data.user);
+      setUsername(data.user.username ?? "");
+      setEmail(data.user.email ?? "");
+      login(storedToken, data.user);
+    }
+  }
 
   async function updateUsername() {
-    const token = localStorage.getItem("token");
-    if (!token) return;
+    const storedToken = token ?? localStorage.getItem("token");
+    if (!storedToken) return;
 
     setLoadingUsername(true);
 
-    await fetch("/api/update-profile", {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ username, email: user?.email }),
-    });
+    try {
+      const response = await fetch("/api/update-profile", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${storedToken}`,
+        },
+        body: JSON.stringify({ username, email: user?.email }),
+      });
 
-    setLoadingUsername(false);
-    alert("Nazwa użytkownika zaktualizowana ✅");
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        alert(data?.error ?? "Nie udalo sie zapisac nazwy uzytkownika.");
+        return;
+      }
+
+      await refreshUser(storedToken);
+      alert(data?.message ?? "Nazwa uzytkownika zaktualizowana.");
+    } catch {
+      alert("Wystapil blad podczas aktualizacji nazwy uzytkownika.");
+    } finally {
+      setLoadingUsername(false);
+    }
   }
 
   async function updateEmail() {
-    const token = localStorage.getItem("token");
-    if (!token) return;
+    const storedToken = token ?? localStorage.getItem("token");
+    if (!storedToken) return;
 
     setLoadingEmail(true);
 
-    await fetch("/api/update-profile", {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ username: user?.username, email }),
-    });
+    try {
+      const response = await fetch("/api/update-profile", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${storedToken}`,
+        },
+        body: JSON.stringify({ username: user?.username, email }),
+      });
 
-    setLoadingEmail(false);
-    alert("Wysłaliśmy email potwierdzający zmianę 📩");
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        alert(data?.error ?? "Nie udalo sie zaktualizowac emaila.");
+        return;
+      }
+
+      await refreshUser(storedToken);
+      alert(data?.message ?? "Wyslalismy email potwierdzajacy zmiane.");
+    } catch {
+      alert("Wystapil blad podczas aktualizacji emaila.");
+    } finally {
+      setLoadingEmail(false);
+    }
   }
 
   return (
     <div className="max-w-3xl mx-auto py-10 space-y-10">
-      <h1 className="text-2xl font-semibold">Szczegóły konta</h1>
+      <h1 className="text-2xl font-semibold">Szczegoly konta</h1>
 
-      {/* 🔹 Zmiana nazwy użytkownika */}
       <div className="border rounded-lg p-6 space-y-4">
-        <h2 className="font-medium">Nazwa użytkownika</h2>
+        <h2 className="font-medium">Nazwa uzytkownika</h2>
 
         <input
           value={username}
@@ -98,11 +143,10 @@ export function Profile() {
             disabled:opacity-50
           "
         >
-          {loadingUsername ? "Zapisywanie..." : "Zapisz nazwę"}
+          {loadingUsername ? "Zapisywanie..." : "Zapisz nazwe"}
         </button>
       </div>
 
-      {/* 🔹 Zmiana email */}
       <div className="border rounded-lg p-6 space-y-4">
         <h2 className="font-medium">Adres email</h2>
 
@@ -120,7 +164,7 @@ export function Profile() {
         )}
 
         <p className="text-sm text-muted-foreground">
-          Po zmianie wyślemy email z potwierdzeniem.
+          Po zmianie wyslemy email z potwierdzeniem.
         </p>
 
         <button
@@ -135,11 +179,10 @@ export function Profile() {
             disabled:opacity-50
           "
         >
-          {loadingEmail ? "Wysyłanie..." : "Zmień email"}
+          {loadingEmail ? "Wysylanie..." : "Zmien email"}
         </button>
       </div>
 
-      {/* 🔹 Zmiana hasła */}
       <div className="border rounded-lg p-6">
         <button
           onClick={() => navigate("/forgot-password")}
@@ -150,7 +193,7 @@ export function Profile() {
             transition-all duration-200
           "
         >
-          Zmień hasło
+          Zmien haslo
         </button>
       </div>
     </div>
