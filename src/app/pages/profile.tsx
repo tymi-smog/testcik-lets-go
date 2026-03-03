@@ -5,23 +5,23 @@ type User = {
   user_id: number;
   username: string;
   email: string;
+  pending_email?: string | null;
   is_admin?: boolean;
 };
 
 export function Profile() {
   const [user, setUser] = useState<User | null>(null);
+
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
-  const [loading, setLoading] = useState(false);
+
+  const [loadingUsername, setLoadingUsername] = useState(false);
+  const [loadingEmail, setLoadingEmail] = useState(false);
 
   const navigate = useNavigate();
 
   useEffect(() => {
-    const token =
-      typeof window !== "undefined"
-        ? localStorage.getItem("token")
-        : null;
-
+    const token = localStorage.getItem("token");
     if (!token) return;
 
     try {
@@ -29,104 +29,129 @@ export function Profile() {
       setUser(payload);
       setUsername(payload.username);
       setEmail(payload.email);
-    } catch (e) {
+    } catch {
       console.error("JWT decode error");
     }
   }, []);
 
-  async function handleSave() {
+  async function updateUsername() {
     const token = localStorage.getItem("token");
     if (!token) return;
 
-    setLoading(true);
+    setLoadingUsername(true);
 
-    try {
-      const res = await fetch("/api/update-profile", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ username, email }),
-      });
+    await fetch("/api/update-profile", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ username, email: user?.email }),
+    });
 
-      if (!res.ok) {
-        alert("Błąd podczas zapisu");
-      } else {
-        alert("Zapisano zmiany ✅");
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Błąd serwera");
-    }
+    setLoadingUsername(false);
+    alert("Nazwa użytkownika zaktualizowana ✅");
+  }
 
-    setLoading(false);
+  async function updateEmail() {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    setLoadingEmail(true);
+
+    await fetch("/api/update-profile", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ username: user?.username, email }),
+    });
+
+    setLoadingEmail(false);
+    alert("Wysłaliśmy email potwierdzający zmianę 📩");
   }
 
   return (
-    <div className="max-w-3xl mx-auto py-10 space-y-6">
+    <div className="max-w-3xl mx-auto py-10 space-y-10">
       <h1 className="text-2xl font-semibold">Szczegóły konta</h1>
 
-      <div className="border rounded-lg p-6 space-y-6">
-        {/* Username */}
-        <div>
-          <p className="text-sm text-muted-foreground">
-            Nazwa użytkownika
-          </p>
-          <input
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            className="w-full border rounded-md p-2"
-          />
-        </div>
+      {/* 🔹 Zmiana nazwy użytkownika */}
+      <div className="border rounded-lg p-6 space-y-4">
+        <h2 className="font-medium">Nazwa użytkownika</h2>
 
-        {/* Email */}
-        <div>
-          <p className="text-sm text-muted-foreground">
-            Email
-          </p>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full border rounded-md p-2"
-          />
-        </div>
+        <input
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          className="w-full border rounded-md p-2"
+        />
 
-        {/* Save button */}
         <button
-          onClick={handleSave}
-          disabled={loading}
+          onClick={updateUsername}
+          disabled={loadingUsername}
           className="
-            px-4 py-2 
-            bg-black text-white 
-            rounded-md 
+            px-4 py-2
+            bg-black text-white
+            rounded-md
             hover:bg-gray-800
-            active:scale-95
             transition-all duration-200
             disabled:opacity-50
-            disabled:cursor-not-allowed
           "
         >
-          {loading ? "Zapisywanie..." : "Zapisz zmiany"}
+          {loadingUsername ? "Zapisywanie..." : "Zapisz nazwę"}
         </button>
+      </div>
 
-        {/* Divider */}
-        <div className="pt-4 border-t">
-          <button
-            onClick={() => navigate("/forgot-password")}
-            className="
-              px-4 py-2 
-              border rounded-md 
-              hover:bg-gray-100 
-              hover:shadow-sm
-              active:scale-95
-              transition-all duration-200
-            "
-          >
-            Zmień hasło
-          </button>
-        </div>
+      {/* 🔹 Zmiana email */}
+      <div className="border rounded-lg p-6 space-y-4">
+        <h2 className="font-medium">Adres email</h2>
+
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="w-full border rounded-md p-2"
+        />
+
+        {user?.pending_email && (
+          <p className="text-sm text-yellow-600">
+            Oczekuje na potwierdzenie: {user.pending_email}
+          </p>
+        )}
+
+        <p className="text-sm text-muted-foreground">
+          Po zmianie wyślemy email z potwierdzeniem.
+        </p>
+
+        <button
+          onClick={updateEmail}
+          disabled={loadingEmail}
+          className="
+            px-4 py-2
+            bg-black text-white
+            rounded-md
+            hover:bg-gray-800
+            transition-all duration-200
+            disabled:opacity-50
+          "
+        >
+          {loadingEmail ? "Wysyłanie..." : "Zmień email"}
+        </button>
+      </div>
+
+      {/* 🔹 Zmiana hasła */}
+      <div className="border rounded-lg p-6">
+        <button
+          onClick={() => navigate("/forgot-password")}
+          className="
+            px-4 py-2
+            border rounded-md
+            hover:bg-gray-100
+            transition-all duration-200
+          "
+        >
+          Zmień hasło
+        </button>
       </div>
     </div>
   );
