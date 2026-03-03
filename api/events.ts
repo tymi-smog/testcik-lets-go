@@ -1,4 +1,4 @@
-import { sql } from "./lib/db.js";
+import { sql } from "../lib/db.js";
 
 export default async function handler(req: any, res: any) {
   if (req.method !== "GET") {

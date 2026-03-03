@@ -1,8 +1,8 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { sql } from "./lib/db.js";
+import { sql } from "../lib/db.js";
 import { useState } from "react";
 import crypto from "crypto";
-import { resend } from "./lib/resend.js";
+import { resend } from "../lib/resend.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {

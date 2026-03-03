@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { sql } from "./lib/db.js";
-import { resend } from "./lib/resend.js";
-import { authenticateRequest } from "./lib/auth.js";
+import { sql } from "../lib/db.js";
+import { resend } from "../lib/resend.js";
+import { authenticateRequest } from "../lib/auth.js";
 
 type CheckoutItem = {
   eventId: string;
