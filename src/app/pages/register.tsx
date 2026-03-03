@@ -64,7 +64,7 @@ export function Register() {
     transition-all duration-200
   "
 >
-  Zajerestruj
+  Zarejestruj
 </button>
       </form>
     </div>
