@@ -2,6 +2,7 @@ import { createBrowserRouter } from "react-router-dom";
 
 import { Root } from "./pages/Root";
 import { Home } from "./pages/Home";
+import { Events } from "./pages/Events";
 import { EventDetail } from "./pages/EventDetail";
 import { Checkout } from "./pages/Checkout";
 
@@ -20,6 +21,7 @@ export const router = createBrowserRouter([
     Component: Root,
     children: [
       { index: true, Component: Home },
+      { path: "events", Component: Events },
 
       { path: "event/:id", Component: EventDetail },
       { path: "checkout", Component: Checkout },

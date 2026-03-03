@@ -52,7 +52,7 @@ function handleLogout() {
         </Link>
 
         <nav className="hidden md:flex items-center gap-6">
-          <Link to="/" className="hover:text-blue-600 transition-colors">
+          <Link to="/events" className="hover:text-blue-600 transition-colors">
             Wydarzenia
           </Link>
           <Link to="/checkout" className="hover:text-blue-600 transition-colors">
