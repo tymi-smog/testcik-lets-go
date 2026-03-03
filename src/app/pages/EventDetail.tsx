@@ -1,7 +1,5 @@
-
-import { useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router';
-import { events } from '../data/events';
+import { useEffect, useState } from 'react';
+import { useParams, Link } from 'react-router';
 import { useCart } from '../context/CartContext';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
@@ -9,13 +7,199 @@ import { Badge } from '../components/ui/badge';
 import { Calendar, MapPin, Clock, Minus, Plus, ArrowLeft, Check } from 'lucide-react';
 import { toast } from 'sonner';
 
+type ApiTicketType = {
+  id: string | number;
+  name: string;
+  price: number | string;
+  available: number | string;
+  description?: string | null;
+};
+
+type ApiEvent = {
+  id: string | number;
+  title: string;
+  category?: string | null;
+  date: string;
+  location?: string | null;
+  image?: string | null;
+  description?: string | null;
+  ticketTypes?: ApiTicketType[];
+};
+
+type EventTicket = {
+  id: string;
+  name: string;
+  price: number;
+  available: number;
+  description?: string;
+};
+
+type EventDetailData = {
+  id: string;
+  title: string;
+  category: string;
+  date: string;
+  location: string;
+  image: string;
+  description: string;
+  ticketTypes: EventTicket[];
+};
+
+const fallbackImage =
+  'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?auto=format&fit=crop&w=1600&q=80';
+
 export function EventDetail() {
   const { id } = useParams();
-  const navigate = useNavigate();
   const { addToCart } = useCart();
-  const event = events.find((e) => e.id === id);
 
   const [selectedTickets, setSelectedTickets] = useState<Record<string, number>>({});
+  const [event, setEvent] = useState<EventDetailData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadEvent = async () => {
+      if (!id) {
+        if (mounted) {
+          setEvent(null);
+          setError(null);
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const response = await fetch('/api/events');
+        if (!response.ok) {
+          throw new Error(`Nie udało się pobrać wydarzeń (${response.status})`);
+        }
+
+        const events = (await response.json()) as ApiEvent[];
+        const rawEvent = events.find((item) => String(item.id) === id);
+
+        if (!rawEvent) {
+          if (mounted) {
+            setEvent(null);
+          }
+          return;
+        }
+
+        const mappedEvent: EventDetailData = {
+          id: String(rawEvent.id),
+          title: rawEvent.title,
+          category: rawEvent.category || 'Inne',
+          date: rawEvent.date,
+          location: rawEvent.location || 'Brak lokalizacji',
+          image: rawEvent.image || fallbackImage,
+          description: rawEvent.description || 'Brak opisu wydarzenia.',
+          ticketTypes: (rawEvent.ticketTypes || []).map((ticket) => ({
+            id: String(ticket.id),
+            name: ticket.name,
+            price: Number(ticket.price),
+            available: Number(ticket.available),
+            description: ticket.description || undefined,
+          })),
+        };
+
+        if (mounted) {
+          setEvent(mappedEvent);
+        }
+      } catch (err) {
+        if (mounted) {
+          setError(err instanceof Error ? err.message : 'Wystąpił nieznany błąd');
+          setEvent(null);
+        }
+      } finally {
+        if (mounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadEvent();
+
+    return () => {
+      mounted = false;
+    };
+  }, [id]);
+
+  const updateTicketQuantity = (ticketId: string, change: number, maxAvailable: number) => {
+    setSelectedTickets((prev) => {
+      const current = prev[ticketId] || 0;
+      const ticketLimit = Math.min(10, maxAvailable);
+      const newValue = Math.max(0, Math.min(ticketLimit, current + change));
+
+      if (newValue === 0) {
+        const { [ticketId]: _, ...rest } = prev;
+        return rest;
+      }
+
+      return { ...prev, [ticketId]: newValue };
+    });
+  };
+
+  const handleAddToCart = () => {
+    if (!event) {
+      return;
+    }
+
+    let itemsAdded = 0;
+
+    Object.entries(selectedTickets).forEach(([ticketId, quantity]) => {
+      const ticketType = event.ticketTypes.find((ticket) => ticket.id === ticketId);
+      if (ticketType && quantity > 0) {
+        addToCart(
+          {
+            eventId: event.id,
+            eventTitle: event.title,
+            ticketTypeId: ticketType.id,
+            ticketTypeName: ticketType.name,
+            price: ticketType.price,
+          },
+          quantity
+        );
+        itemsAdded += quantity;
+      }
+    });
+
+    if (itemsAdded > 0) {
+      if (itemsAdded > 4) {
+        toast.success(`Dodano ${itemsAdded} biletów do koszyka!`);
+      } else if (itemsAdded > 1) {
+        toast.success(`Dodano ${itemsAdded} bilety do koszyka!`);
+      } else {
+        toast.success(`Dodano ${itemsAdded} bilet do koszyka!`);
+      }
+
+      setSelectedTickets({});
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-gray-500 text-lg">Ładowanie wydarzenia...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-xl mb-4 text-red-600">{error}</p>
+          <Link to="/">
+            <Button>Wróć do wydarzeń</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   if (!event) {
     return (
@@ -30,57 +214,28 @@ export function EventDetail() {
     );
   }
 
-  const updateTicketQuantity = (ticketId: string, change: number) => {
-    setSelectedTickets((prev) => {
-      const current = prev[ticketId] || 0;
-      const newValue = Math.max(0, Math.min(10, current + change));
-      if (newValue === 0) {
-        const { [ticketId]: _, ...rest } = prev;
-        return rest;
-      }
-      return { ...prev, [ticketId]: newValue };
-    });
-  };
-
-const handleAddToCart = () => {
-  let itemsAdded = 0;
-
-  Object.entries(selectedTickets).forEach(([ticketId, quantity]) => {
-    const ticketType = event.ticketTypes.find((t) => t.id === ticketId);
-    if (ticketType && quantity > 0) {
-      addToCart(
-        {
-          eventId: event.id,
-          eventTitle: event.title,
-          ticketTypeId: ticketType.id,
-          ticketTypeName: ticketType.name,
-          price: ticketType.price,
-        },
-        quantity
-      );
-      itemsAdded += quantity;
-    }
-  });
-
-  if (itemsAdded > 0) {
-    if (itemsAdded > 4) {
-      toast.success(`Dodano ${itemsAdded} biletów do koszyka!`);
-    } else if (itemsAdded > 1) {
-      toast.success(`Dodano ${itemsAdded} bilety do koszyka!`);
-    } else {
-      toast.success(`Dodano ${itemsAdded} bilet do koszyka!`);
-    }
-
-    setSelectedTickets({});
-  }
-};
-
-
   const totalSelected = Object.values(selectedTickets).reduce((sum, qty) => sum + qty, 0);
   const totalPrice = Object.entries(selectedTickets).reduce((sum, [ticketId, quantity]) => {
     const ticket = event.ticketTypes.find((t) => t.id === ticketId);
     return sum + (ticket?.price || 0) * quantity;
   }, 0);
+
+  const eventDate = new Date(event.date);
+  const dateLabel = Number.isNaN(eventDate.getTime())
+    ? 'Brak daty'
+    : eventDate.toLocaleDateString('pl-PL', {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric',
+      });
+
+  const timeLabel = Number.isNaN(eventDate.getTime())
+    ? 'Brak godziny'
+    : eventDate.toLocaleTimeString('pl-PL', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -115,29 +270,21 @@ const handleAddToCart = () => {
                   <Calendar className="size-5 text-blue-600" />
                   <div>
                     <p className="text-sm text-gray-600">Data</p>
-                    <p>
-                      {new Date(event.Data).toLocaleDateString('pl-PL', {
-                        weekday: 'long',
-                        month: 'long',
-                        day: 'numeric',
-                        year: 'numeric',
-                      })}
-                    </p>
+                    <p>{dateLabel}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <Clock className="size-5 text-blue-600" />
                   <div>
                     <p className="text-sm text-gray-600">Czas</p>
-                    <p>{event.Godzina}</p>
+                    <p>{timeLabel}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <MapPin className="size-5 text-blue-600" />
                   <div>
                     <p className="text-sm text-gray-600">Miejsce</p>
-                    <p>{event.Miejsce}</p>
-                    <p className="text-sm text-gray-600">{event.Lokalizacja}</p>
+                    <p>{event.location}</p>
                   </div>
                 </div>
               </CardContent>
@@ -164,9 +311,7 @@ const handleAddToCart = () => {
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex-1">
                         <p>{ticket.name}</p>
-                        <p className="text-sm text-gray-600">
-                          {ticket.available} Dostępne
-                        </p>
+                        <p className="text-sm text-gray-600">{ticket.available} Dostępne</p>
                         {ticket.description && (
                           <p className="text-xs text-gray-500 mt-1">{ticket.description}</p>
                         )}
@@ -178,18 +323,17 @@ const handleAddToCart = () => {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => updateTicketQuantity(ticket.id, -1)}
+                          onClick={() => updateTicketQuantity(ticket.id, -1, ticket.available)}
                           disabled={!selectedTickets[ticket.id]}
                         >
                           <Minus className="size-4" />
                         </Button>
-                        <span className="w-8 text-center">
-                          {selectedTickets[ticket.id] || 0}
-                        </span>
+                        <span className="w-8 text-center">{selectedTickets[ticket.id] || 0}</span>
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => updateTicketQuantity(ticket.id, 1)}
+                          onClick={() => updateTicketQuantity(ticket.id, 1, ticket.available)}
+                          disabled={(selectedTickets[ticket.id] || 0) >= Math.min(10, ticket.available)}
                         >
                           <Plus className="size-4" />
                         </Button>
