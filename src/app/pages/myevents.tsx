@@ -5,12 +5,21 @@ import { useAuth } from "../../context/AuthContext";
 type MyEvent = {
   id: string | number;
   title: string;
+  description?: string | null;
   date: string;
   location?: string | null;
   created_at?: string | null;
   creator_id?: number | string | null;
+  creator_username?: string | null;
   image_url?: string | null;
   image?: string | null;
+  ticketTypes?: Array<{
+    id?: string | number;
+    name: string;
+    price: number | string;
+    available: number | string;
+    description?: string | null;
+  }>;
 };
 
 type TicketDraft = {
@@ -36,6 +45,7 @@ export function MyEvents() {
   ]);
 
   const [submitting, setSubmitting] = useState(false);
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [events, setEvents] = useState<MyEvent[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
 
@@ -54,15 +64,15 @@ export function MyEvents() {
       }
 
       const data = (await response.json()) as MyEvent[];
-      const own = data
-        .filter((event) => Number(event.creator_id) === Number(currentUserId))
+      const visible = data
+        .filter((event) => (user?.is_admin ? true : Number(event.creator_id) === Number(currentUserId)))
         .sort((a, b) => {
           const aTime = Date.parse(a.created_at || a.date || "");
           const bTime = Date.parse(b.created_at || b.date || "");
           return (Number.isNaN(bTime) ? 0 : bTime) - (Number.isNaN(aTime) ? 0 : aTime);
         });
 
-      setEvents(own);
+      setEvents(visible);
     } catch (error) {
       console.error(error);
       setEvents([]);
@@ -73,7 +83,7 @@ export function MyEvents() {
 
   useEffect(() => {
     loadMyEvents(user?.userId);
-  }, [user?.userId]);
+  }, [user?.userId, user?.is_admin]);
 
   const hasValidTickets = useMemo(
     () =>
@@ -122,6 +132,43 @@ export function MyEvents() {
     );
   }
 
+  function startEditing(event: MyEvent) {
+    setEditingEventId(String(event.id));
+    setTitle(event.title || "");
+    setDescription(event.description || "");
+    setLocation(event.location || "");
+
+    const eventDate = event.date ? new Date(event.date) : null;
+    if (eventDate && !Number.isNaN(eventDate.getTime())) {
+      const local = new Date(eventDate.getTime() - eventDate.getTimezoneOffset() * 60000);
+      setDate(local.toISOString().slice(0, 16));
+    } else {
+      setDate("");
+    }
+
+    setImageUrl(event.image_url || "");
+
+    const mappedTickets =
+      event.ticketTypes?.map((ticket) => ({
+        name: String(ticket.name ?? ""),
+        price: String(ticket.price ?? ""),
+        available: String(ticket.available ?? ""),
+        description: String(ticket.description ?? ""),
+      })) ?? [];
+
+    setTicketTypes(mappedTickets.length ? mappedTickets : [{ name: "", price: "", available: "", description: "" }]);
+  }
+
+  function clearForm() {
+    setEditingEventId(null);
+    setTitle("");
+    setDescription("");
+    setLocation("");
+    setDate("");
+    setImageUrl("");
+    setTicketTypes([{ name: "", price: "", available: "", description: "" }]);
+  }
+
   async function handleCreateEvent(e: React.FormEvent) {
     e.preventDefault();
 
@@ -134,8 +181,10 @@ export function MyEvents() {
     setSubmitting(true);
 
     try {
-      const response = await fetch("/api/events", {
-        method: "POST",
+      const endpoint = editingEventId ? `/api/events?id=${editingEventId}` : "/api/events";
+      const method = editingEventId ? "PUT" : "POST";
+      const response = await fetch(endpoint, {
+        method,
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${authToken}`,
@@ -161,17 +210,12 @@ export function MyEvents() {
         return;
       }
 
-      setTitle("");
-      setDescription("");
-      setLocation("");
-      setDate("");
-      setImageUrl("");
-      setTicketTypes([{ name: "", price: "", available: "", description: "" }]);
+      clearForm();
       await loadMyEvents(user?.userId);
-      alert("Wydarzenie zostalo dodane.");
+      alert(editingEventId ? "Wydarzenie zostalo zaktualizowane." : "Wydarzenie zostalo dodane.");
     } catch (error) {
       console.error(error);
-      alert("Wystapil blad podczas tworzenia wydarzenia.");
+      alert("Wystapil blad podczas zapisu wydarzenia.");
     } finally {
       setSubmitting(false);
     }
@@ -201,11 +245,26 @@ export function MyEvents() {
     <div className="max-w-4xl mx-auto py-10 space-y-10">
       <section className="space-y-4">
         <h1 className="text-2xl font-semibold">Moje wydarzenia</h1>
-        <p className="text-gray-600">Dodaj nowe wydarzenie. Bedzie widoczne na stronie glownej i liscie wszystkich wydarzen.</p>
+        <p className="text-gray-600">
+          {user.is_admin
+            ? "Jako admin mozesz edytowac wszystkie wydarzenia."
+            : "Dodaj nowe wydarzenie. Bedzie widoczne na stronie glownej i liscie wszystkich wydarzen."}
+        </p>
       </section>
 
       <section className="border rounded-lg p-6 bg-white">
-        <h2 className="text-lg font-medium mb-4">Nowe wydarzenie</h2>
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <h2 className="text-lg font-medium">{editingEventId ? "Edycja wydarzenia" : "Nowe wydarzenie"}</h2>
+          {editingEventId && (
+            <button
+              type="button"
+              onClick={clearForm}
+              className="rounded-md border px-3 py-1.5 text-sm hover:bg-gray-100"
+            >
+              Anuluj edycje
+            </button>
+          )}
+        </div>
 
         <form onSubmit={handleCreateEvent} className="space-y-4">
           <input
@@ -323,7 +382,7 @@ export function MyEvents() {
             disabled={!canSubmit || submitting}
             className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 disabled:opacity-50"
           >
-            {submitting ? "Zapisywanie..." : "Dodaj wydarzenie"}
+            {submitting ? "Zapisywanie..." : editingEventId ? "Zapisz zmiany" : "Dodaj wydarzenie"}
           </button>
         </form>
       </section>
@@ -359,7 +418,19 @@ export function MyEvents() {
                   <div className="p-4 space-y-2">
                     <h3 className="font-medium text-lg">{event.title}</h3>
                     <p className="text-sm text-gray-600">{event.location || "Brak lokalizacji"}</p>
+                    {user.is_admin && (
+                      <p className="text-xs text-gray-500">
+                        Autor: {event.creator_username || "Nieznany"} (ID: {event.creator_id ?? "?"})
+                      </p>
+                    )}
                     <p className="text-xs text-gray-500">Dodane: {createdLabel}</p>
+                    <button
+                      type="button"
+                      onClick={() => startEditing(event)}
+                      className="mt-2 rounded-md border px-3 py-1.5 text-sm hover:bg-gray-100"
+                    >
+                      Edytuj
+                    </button>
                   </div>
                 </article>
               );

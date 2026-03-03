@@ -390,5 +390,165 @@ export default async function handler(req: any, res: any) {
     }
   }
 
+  if (req.method === "PUT") {
+    try {
+      const authUser = await authenticateRequest(req);
+      if (!authUser) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const idFromQuery = Number(req.query?.id);
+      if (!Number.isFinite(idFromQuery) || idFromQuery <= 0) {
+        return res.status(400).json({ error: "Invalid event id" });
+      }
+
+      const body = parseRequestBody(req.body);
+      const title = String(body?.title ?? "").trim();
+      const description = String(body?.description ?? "").trim();
+      const location = String(body?.location ?? "").trim();
+      const date = String(body?.date ?? "").trim();
+      const imageUrl = String(body?.imageUrl ?? "").trim();
+      const rawTicketTypes = Array.isArray(body?.ticketTypes) ? body.ticketTypes : [];
+      const ticketTypes: TicketInput[] = rawTicketTypes.map((ticket: any) => ({
+        name: String(ticket?.name ?? "").trim(),
+        price: Number(ticket?.price ?? 0),
+        available: Math.floor(Number(ticket?.available ?? 0)),
+        description: String(ticket?.description ?? "").trim(),
+      }));
+
+      if (!title || !description || !location || !date) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+      if (ticketTypes.length === 0) {
+        return res.status(400).json({ error: "At least one ticket type is required" });
+      }
+      const hasInvalidTicket = ticketTypes.some(
+        (ticket) =>
+          !ticket.name ||
+          !Number.isFinite(ticket.price) ||
+          ticket.price < 0 ||
+          !Number.isFinite(ticket.available) ||
+          ticket.available < 1
+      );
+      if (hasInvalidTicket) {
+        return res.status(400).json({ error: "Invalid ticket types payload" });
+      }
+
+      const parsedDate = new Date(date);
+      if (Number.isNaN(parsedDate.getTime())) {
+        return res.status(400).json({ error: "Invalid date" });
+      }
+
+      const ticketPrice = Math.min(...ticketTypes.map((ticket) => ticket.price));
+      const availableTickets = ticketTypes.reduce((sum, ticket) => sum + ticket.available, 0);
+
+      const eventRows = await sql`
+        SELECT id, creator_id
+        FROM events
+        WHERE id = ${idFromQuery}
+        LIMIT 1
+      `;
+      const eventRow = eventRows[0];
+      if (!eventRow) {
+        return res.status(404).json({ error: "Event not found" });
+      }
+
+      const isOwner = Number(eventRow.creator_id) === Number(authUser.userId);
+      const isAdmin = authUser.is_admin === true;
+      if (!isOwner && !isAdmin) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+
+      const eventColumns = await sql`
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'events'
+      `;
+      const eventColumnNames = new Set(eventColumns.map((column: any) => String(column.column_name)));
+      const hasImage = eventColumnNames.has("image");
+      const hasImageUrl = eventColumnNames.has("image_url");
+
+      if (hasImage) {
+        await sql`
+          UPDATE events
+          SET
+            title = ${title},
+            description = ${description},
+            location = ${location},
+            date = ${parsedDate.toISOString()},
+            ticket_price = ${ticketPrice},
+            available_tickets = ${availableTickets},
+            image = ${imageUrl || null}
+          WHERE id = ${idFromQuery}
+        `;
+      } else if (hasImageUrl) {
+        await sql`
+          UPDATE events
+          SET
+            title = ${title},
+            description = ${description},
+            location = ${location},
+            date = ${parsedDate.toISOString()},
+            ticket_price = ${ticketPrice},
+            available_tickets = ${availableTickets},
+            image_url = ${imageUrl || null}
+          WHERE id = ${idFromQuery}
+        `;
+      } else {
+        await sql`
+          UPDATE events
+          SET
+            title = ${title},
+            description = ${description},
+            location = ${location},
+            date = ${parsedDate.toISOString()},
+            ticket_price = ${ticketPrice},
+            available_tickets = ${availableTickets}
+          WHERE id = ${idFromQuery}
+        `;
+      }
+
+      const ticketColumns = await sql`
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'ticket_types'
+      `;
+      const ticketColumnNames = new Set(ticketColumns.map((column: any) => String(column.column_name)));
+      const hasTicketTypes = ticketColumnNames.size > 0;
+      if (!hasTicketTypes) {
+        return res.status(500).json({ error: "ticket_types table is missing" });
+      }
+
+      await sql`
+        DELETE FROM ticket_types
+        WHERE event_id = ${idFromQuery}
+      `;
+
+      for (const ticket of ticketTypes) {
+        await sql`
+          INSERT INTO ticket_types (
+            event_id,
+            name,
+            price,
+            available,
+            description
+          )
+          VALUES (
+            ${idFromQuery},
+            ${ticket.name},
+            ${ticket.price},
+            ${ticket.available},
+            ${ticket.description || null}
+          )
+        `;
+      }
+
+      return res.status(200).json({ message: "Event updated" });
+    } catch (error: any) {
+      console.error("EVENT UPDATE ERROR:", error);
+      return res.status(500).json({ error: error.message ?? "Update failed" });
+    }
+  }
+
   return res.status(405).json({ message: "Method not allowed" });
 }
