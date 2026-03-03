@@ -69,68 +69,132 @@ export default async function handler(req: any, res: any) {
       const columnNames = new Set(columns.map((column: any) => String(column.column_name)));
       const hasImage = columnNames.has("image");
       const hasImageUrl = columnNames.has("image_url");
+      const hasLocation = columnNames.has("location");
       const hasCity = columnNames.has("city");
       const hasVenue = columnNames.has("venue");
 
       let events: EventRow[] = [];
 
       if (hasImage) {
-        events = await sql`
-          SELECT
-            events.id,
-            events.creator_id,
-            events.category_id,
-            events.title,
-            events.description,
-            events.location,
-            events.date,
-            events.ticket_price,
-            events.available_tickets,
-            events.created_at,
-            events.image AS image_url,
-            categories.name AS category
-          FROM events
-          LEFT JOIN categories ON events.category_id = categories.id
-          ORDER BY events.date ASC
-        `;
+        if (hasLocation) {
+          events = await sql`
+            SELECT
+              events.id,
+              events.creator_id,
+              events.category_id,
+              events.title,
+              events.description,
+              events.location,
+              events.date,
+              events.ticket_price,
+              events.available_tickets,
+              events.created_at,
+              events.image AS image_url,
+              categories.name AS category
+            FROM events
+            LEFT JOIN categories ON events.category_id = categories.id
+            ORDER BY events.date ASC
+          `;
+        } else {
+          events = await sql`
+            SELECT
+              events.id,
+              events.creator_id,
+              events.category_id,
+              events.title,
+              events.description,
+              NULL::text AS location,
+              events.date,
+              events.ticket_price,
+              events.available_tickets,
+              events.created_at,
+              events.image AS image_url,
+              categories.name AS category
+            FROM events
+            LEFT JOIN categories ON events.category_id = categories.id
+            ORDER BY events.date ASC
+          `;
+        }
       } else if (hasImageUrl) {
-        events = await sql`
-          SELECT
-            events.id,
-            events.creator_id,
-            events.category_id,
-            events.title,
-            events.description,
-            events.location,
-            events.date,
-            events.ticket_price,
-            events.available_tickets,
-            events.created_at,
-            events.image_url AS image_url,
-            categories.name AS category
-          FROM events
-          LEFT JOIN categories ON events.category_id = categories.id
-          ORDER BY events.date ASC
-        `;
+        if (hasLocation) {
+          events = await sql`
+            SELECT
+              events.id,
+              events.creator_id,
+              events.category_id,
+              events.title,
+              events.description,
+              events.location,
+              events.date,
+              events.ticket_price,
+              events.available_tickets,
+              events.created_at,
+              events.image_url AS image_url,
+              categories.name AS category
+            FROM events
+            LEFT JOIN categories ON events.category_id = categories.id
+            ORDER BY events.date ASC
+          `;
+        } else {
+          events = await sql`
+            SELECT
+              events.id,
+              events.creator_id,
+              events.category_id,
+              events.title,
+              events.description,
+              NULL::text AS location,
+              events.date,
+              events.ticket_price,
+              events.available_tickets,
+              events.created_at,
+              events.image_url AS image_url,
+              categories.name AS category
+            FROM events
+            LEFT JOIN categories ON events.category_id = categories.id
+            ORDER BY events.date ASC
+          `;
+        }
       } else {
-        events = await sql`
-          SELECT
-            events.id,
-            events.creator_id,
-            events.category_id,
-            events.title,
-            events.description,
-            events.location,
-            events.date,
-            events.ticket_price,
-            events.available_tickets,
-            events.created_at,
-            NULL::text AS image_url,
-            categories.name AS category
-          FROM events
-          LEFT JOIN categories ON events.category_id = categories.id
-          ORDER BY events.date ASC
-        `;
+        if (hasLocation) {
+          events = await sql`
+            SELECT
+              events.id,
+              events.creator_id,
+              events.category_id,
+              events.title,
+              events.description,
+              events.location,
+              events.date,
+              events.ticket_price,
+              events.available_tickets,
+              events.created_at,
+              NULL::text AS image_url,
+              categories.name AS category
+            FROM events
+            LEFT JOIN categories ON events.category_id = categories.id
+            ORDER BY events.date ASC
+          `;
+        } else {
+          events = await sql`
+            SELECT
+              events.id,
+              events.creator_id,
+              events.category_id,
+              events.title,
+              events.description,
+              NULL::text AS location,
+              events.date,
+              events.ticket_price,
+              events.available_tickets,
+              events.created_at,
+              NULL::text AS image_url,
+              categories.name AS category
+            FROM events
+            LEFT JOIN categories ON events.category_id = categories.id
+            ORDER BY events.date ASC
+          `;
+        }
       }
 
       let eventLocationRows: Array<{ id: number | string; city?: string | null; venue?: string | null }> = [];
@@ -377,6 +441,7 @@ export default async function handler(req: any, res: any) {
       const columnNames = new Set(columns.map((column: any) => String(column.column_name)));
       const hasImage = columnNames.has("image");
       const hasImageUrl = columnNames.has("image_url");
+      const hasLocation = columnNames.has("location");
       const hasCity = columnNames.has("city");
       const hasVenue = columnNames.has("venue");
 
@@ -384,81 +449,157 @@ export default async function handler(req: any, res: any) {
       let eventId: number | null = null;
 
       if (hasImage) {
-        createdEvent = await sql`
-          INSERT INTO events (
-            creator_id,
-            category_id,
-            title,
-            description,
-            location,
-            date,
-            ticket_price,
-            available_tickets,
-            image
-          )
-          VALUES (
-            ${authUser.userId},
-            ${categoryId},
-            ${title},
-            ${description},
-            ${location},
-            ${parsedDate.toISOString()},
-            ${ticketPrice},
-            ${availableTickets},
-            ${imageUrl || null}
-          )
-          RETURNING id
-        `;
+        if (hasLocation) {
+          createdEvent = await sql`
+            INSERT INTO events (
+              creator_id,
+              category_id,
+              title,
+              description,
+              location,
+              date,
+              ticket_price,
+              available_tickets,
+              image
+            )
+            VALUES (
+              ${authUser.userId},
+              ${categoryId},
+              ${title},
+              ${description},
+              ${location},
+              ${parsedDate.toISOString()},
+              ${ticketPrice},
+              ${availableTickets},
+              ${imageUrl || null}
+            )
+            RETURNING id
+          `;
+        } else {
+          createdEvent = await sql`
+            INSERT INTO events (
+              creator_id,
+              category_id,
+              title,
+              description,
+              date,
+              ticket_price,
+              available_tickets,
+              image
+            )
+            VALUES (
+              ${authUser.userId},
+              ${categoryId},
+              ${title},
+              ${description},
+              ${parsedDate.toISOString()},
+              ${ticketPrice},
+              ${availableTickets},
+              ${imageUrl || null}
+            )
+            RETURNING id
+          `;
+        }
       } else if (hasImageUrl) {
-        createdEvent = await sql`
-          INSERT INTO events (
-            creator_id,
-            category_id,
-            title,
-            description,
-            location,
-            date,
-            ticket_price,
-            available_tickets,
-            image_url
-          )
-          VALUES (
-            ${authUser.userId},
-            ${categoryId},
-            ${title},
-            ${description},
-            ${location},
-            ${parsedDate.toISOString()},
-            ${ticketPrice},
-            ${availableTickets},
-            ${imageUrl || null}
-          )
-          RETURNING id
-        `;
+        if (hasLocation) {
+          createdEvent = await sql`
+            INSERT INTO events (
+              creator_id,
+              category_id,
+              title,
+              description,
+              location,
+              date,
+              ticket_price,
+              available_tickets,
+              image_url
+            )
+            VALUES (
+              ${authUser.userId},
+              ${categoryId},
+              ${title},
+              ${description},
+              ${location},
+              ${parsedDate.toISOString()},
+              ${ticketPrice},
+              ${availableTickets},
+              ${imageUrl || null}
+            )
+            RETURNING id
+          `;
+        } else {
+          createdEvent = await sql`
+            INSERT INTO events (
+              creator_id,
+              category_id,
+              title,
+              description,
+              date,
+              ticket_price,
+              available_tickets,
+              image_url
+            )
+            VALUES (
+              ${authUser.userId},
+              ${categoryId},
+              ${title},
+              ${description},
+              ${parsedDate.toISOString()},
+              ${ticketPrice},
+              ${availableTickets},
+              ${imageUrl || null}
+            )
+            RETURNING id
+          `;
+        }
       } else {
-        createdEvent = await sql`
-          INSERT INTO events (
-            creator_id,
-            category_id,
-            title,
-            description,
-            location,
-            date,
-            ticket_price,
-            available_tickets
-          )
-          VALUES (
-            ${authUser.userId},
-            ${categoryId},
-            ${title},
-            ${description},
-            ${location},
-            ${parsedDate.toISOString()},
-            ${ticketPrice},
-            ${availableTickets}
-          )
-          RETURNING id
-        `;
+        if (hasLocation) {
+          createdEvent = await sql`
+            INSERT INTO events (
+              creator_id,
+              category_id,
+              title,
+              description,
+              location,
+              date,
+              ticket_price,
+              available_tickets
+            )
+            VALUES (
+              ${authUser.userId},
+              ${categoryId},
+              ${title},
+              ${description},
+              ${location},
+              ${parsedDate.toISOString()},
+              ${ticketPrice},
+              ${availableTickets}
+            )
+            RETURNING id
+          `;
+        } else {
+          createdEvent = await sql`
+            INSERT INTO events (
+              creator_id,
+              category_id,
+              title,
+              description,
+              date,
+              ticket_price,
+              available_tickets
+            )
+            VALUES (
+              ${authUser.userId},
+              ${categoryId},
+              ${title},
+              ${description},
+              ${parsedDate.toISOString()},
+              ${ticketPrice},
+              ${availableTickets}
+            )
+            RETURNING id
+          `;
+        }
       }
       eventId = Number(createdEvent[0]?.id ?? 0) || null;
       if (!eventId) {
@@ -623,47 +764,89 @@ export default async function handler(req: any, res: any) {
       const eventColumnNames = new Set(eventColumns.map((column: any) => String(column.column_name)));
       const hasImage = eventColumnNames.has("image");
       const hasImageUrl = eventColumnNames.has("image_url");
+      const hasLocation = eventColumnNames.has("location");
       const hasCity = eventColumnNames.has("city");
       const hasVenue = eventColumnNames.has("venue");
 
       if (hasImage) {
-        await sql`
-          UPDATE events
-          SET
-            title = ${title},
-            description = ${description},
-            location = ${location},
-            date = ${parsedDate.toISOString()},
-            ticket_price = ${ticketPrice},
-            available_tickets = ${availableTickets},
-            image = ${imageUrl || null}
-          WHERE id = ${idFromQuery}
-        `;
+        if (hasLocation) {
+          await sql`
+            UPDATE events
+            SET
+              title = ${title},
+              description = ${description},
+              location = ${location},
+              date = ${parsedDate.toISOString()},
+              ticket_price = ${ticketPrice},
+              available_tickets = ${availableTickets},
+              image = ${imageUrl || null}
+            WHERE id = ${idFromQuery}
+          `;
+        } else {
+          await sql`
+            UPDATE events
+            SET
+              title = ${title},
+              description = ${description},
+              date = ${parsedDate.toISOString()},
+              ticket_price = ${ticketPrice},
+              available_tickets = ${availableTickets},
+              image = ${imageUrl || null}
+            WHERE id = ${idFromQuery}
+          `;
+        }
       } else if (hasImageUrl) {
-        await sql`
-          UPDATE events
-          SET
-            title = ${title},
-            description = ${description},
-            location = ${location},
-            date = ${parsedDate.toISOString()},
-            ticket_price = ${ticketPrice},
-            available_tickets = ${availableTickets},
-            image_url = ${imageUrl || null}
-          WHERE id = ${idFromQuery}
-        `;
+        if (hasLocation) {
+          await sql`
+            UPDATE events
+            SET
+              title = ${title},
+              description = ${description},
+              location = ${location},
+              date = ${parsedDate.toISOString()},
+              ticket_price = ${ticketPrice},
+              available_tickets = ${availableTickets},
+              image_url = ${imageUrl || null}
+            WHERE id = ${idFromQuery}
+          `;
+        } else {
+          await sql`
+            UPDATE events
+            SET
+              title = ${title},
+              description = ${description},
+              date = ${parsedDate.toISOString()},
+              ticket_price = ${ticketPrice},
+              available_tickets = ${availableTickets},
+              image_url = ${imageUrl || null}
+            WHERE id = ${idFromQuery}
+          `;
+        }
       } else {
-        await sql`
-          UPDATE events
-          SET
-            title = ${title},
-            description = ${description},
-            location = ${location},
-            date = ${parsedDate.toISOString()},
-            ticket_price = ${ticketPrice},
-            available_tickets = ${availableTickets}
-          WHERE id = ${idFromQuery}
-        `;
+        if (hasLocation) {
+          await sql`
+            UPDATE events
+            SET
+              title = ${title},
+              description = ${description},
+              location = ${location},
+              date = ${parsedDate.toISOString()},
+              ticket_price = ${ticketPrice},
+              available_tickets = ${availableTickets}
+            WHERE id = ${idFromQuery}
+          `;
+        } else {
+          await sql`
+            UPDATE events
+            SET
+              title = ${title},
+              description = ${description},
+              date = ${parsedDate.toISOString()},
+              ticket_price = ${ticketPrice},
+              available_tickets = ${availableTickets}
+            WHERE id = ${idFromQuery}
+          `;
+        }
       }
 
       if (hasCity || hasVenue) {
