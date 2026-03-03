@@ -25,9 +25,18 @@ export function ForgotPassword() {
         required
         className="w-full border rounded-lg p-2"
       />
-      <button className="mt-3 w-full bg-black text-white rounded-lg p-2">
-        Resetuj hasło
-      </button>
+<button
+  className="
+    mt-3 w-full
+    bg-black text-white
+    rounded-lg p-2
+    hover:bg-gray-800
+    active:scale-95
+    transition-all duration-200
+  "
+>
+  Resetuj hasło
+</button>
     </form>
   );
 }
