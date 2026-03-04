@@ -11,6 +11,7 @@ import { Login } from "./pages/login";
 import { Register } from "./pages/register";
 import { Profile } from "./pages/profile";
 import { MyEvents } from "./pages/myevents";
+import { MyTickets } from "./pages/mytickets";
 
 import { VerifyEmail } from "./pages/VerifyEmail";
 import { ForgotPassword } from "./pages/ForgotPassword";
@@ -33,6 +34,7 @@ export const router = createBrowserRouter([
       { path: "register", Component: Register },
       { path: "profile", Component: Profile },
       { path: "my-events", Component: MyEvents },
+      { path: "my-tickets", Component: MyTickets },
 
       { path: "verify-email", Component: VerifyEmail },
 

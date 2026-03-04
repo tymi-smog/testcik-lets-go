@@ -77,6 +77,9 @@ export function Header() {
                   <DropdownMenuItem asChild>
                     <Link to="/my-events">Moje wydarzenia</Link>
                   </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/my-tickets">Moje bilety</Link>
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleLogout}>Wyloguj się</DropdownMenuItem>
                 </>
               )}
@@ -99,4 +102,3 @@ export function Header() {
     </header>
   );
 }
-

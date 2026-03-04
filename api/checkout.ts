@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { sql } from "../lib/db.js";
 import { resend } from "../lib/resend.js";
 import { authenticateRequest } from "../lib/auth.js";
+import { ensureTicketPurchasesTable } from "../lib/ticket-purchases.js";
 
 type CheckoutItem = {
   eventId: string;
@@ -55,7 +56,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     await sql`BEGIN`;
 
     const purchasedLines: Array<{
+      eventId: number;
       eventTitle: string;
+      ticketTypeId: number;
       ticketTypeName: string;
       quantity: number;
       unitPrice: number;
@@ -72,6 +75,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             tt.price,
             tt.available,
             tt.event_id,
+            tt.id AS ticket_type_id,
             e.title AS event_title
           FROM ticket_types tt
           JOIN events e ON e.id = tt.event_id
@@ -88,7 +92,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           RETURNING tt.id, tt.available
         )
         SELECT 
+          s.event_id,
           s.event_title,
+          s.ticket_type_id,
           s.name,
           s.price,
           u.available
@@ -104,7 +110,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       const row = rows[0] as {
+        event_id: number;
         event_title: string;
+        ticket_type_id: number;
         name: string;
         price: number | string;
         available: number;
@@ -112,7 +120,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const unitPrice = Number(row.price);
 
       purchasedLines.push({
+        eventId: Number(row.event_id),
         eventTitle: row.event_title,
+        ticketTypeId: Number(row.ticket_type_id),
         ticketTypeName: row.name,
         quantity: item.quantity,
         unitPrice,
@@ -124,6 +134,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const subtotal = purchasedLines.reduce((sum, line) => sum + line.lineTotal, 0);
     const serviceFee = Number((subtotal * 0.05).toFixed(2));
     const total = Number((subtotal + serviceFee).toFixed(2));
+
+    await ensureTicketPurchasesTable();
+
+    for (const line of purchasedLines) {
+      await sql`
+        INSERT INTO ticket_purchases (
+          user_id,
+          event_id,
+          event_title,
+          ticket_type_id,
+          ticket_type_name,
+          quantity,
+          unit_price,
+          line_total
+        )
+        VALUES (
+          ${authUser.userId},
+          ${line.eventId},
+          ${line.eventTitle},
+          ${line.ticketTypeId},
+          ${line.ticketTypeName},
+          ${line.quantity},
+          ${line.unitPrice},
+          ${line.lineTotal}
+        )
+      `;
+    }
 
     const lineItemsHtml = purchasedLines
       .map(
