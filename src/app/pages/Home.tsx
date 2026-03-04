@@ -45,8 +45,22 @@ type HomeEvent = {
 const fallbackImage =
   "https://images.unsplash.com/photo-1523580494863-6f3031224c94?auto=format&fit=crop&w=1080&q=80";
 
+function parseEventDate(value: string): number {
+  const direct = Date.parse(value);
+  if (Number.isFinite(direct)) {
+    return direct;
+  }
+
+  const normalized = value.includes(" ") ? value.replace(" ", "T") : value;
+  const fallback = Date.parse(normalized);
+  if (Number.isFinite(fallback)) {
+    return fallback;
+  }
+
+  return NaN;
+}
+
 export function Home() {
-  const [selectedCategory, setSelectedCategory] = useState("Wszystkie");
   const [events, setEvents] = useState<HomeEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +75,7 @@ export function Home() {
 
         const response = await fetch("/api/events");
         if (!response.ok) {
-          throw new Error(`Nie udało się pobrać wydarzeń (${response.status})`);
+          throw new Error(`Nie udalo sie pobrac wydarzen (${response.status})`);
         }
 
         const data = (await response.json()) as ApiEvent[];
@@ -88,7 +102,7 @@ export function Home() {
         }
       } catch (err) {
         if (mounted) {
-          setError(err instanceof Error ? err.message : "Wystąpił nieznany błąd");
+          setError(err instanceof Error ? err.message : "Wystapil nieznany blad");
           setEvents([]);
         }
       } finally {
@@ -110,7 +124,7 @@ export function Home() {
 
     return [...events]
       .filter((event) => {
-        const eventTime = Date.parse(event.date);
+        const eventTime = parseEventDate(event.date);
         return Number.isFinite(eventTime) && eventTime > now;
       })
       .sort((a, b) => {
@@ -121,53 +135,23 @@ export function Home() {
       .slice(0, 10);
   }, [events]);
 
-  const categories = useMemo(() => {
-    const unique = [...new Set(latestEvents.map((event) => event.category))];
-    return ["Wszystkie", ...unique];
-  }, [latestEvents]);
-
-  useEffect(() => {
-    if (!categories.includes(selectedCategory)) {
-      setSelectedCategory("Wszystkie");
-    }
-  }, [categories, selectedCategory]);
-
-  const filteredEvents =
-    selectedCategory === "Wszystkie"
-      ? latestEvents
-      : latestEvents.filter((event) => event.category === selectedCategory);
-
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-[#041f14] text-white py-16">
         <div className="container mx-auto px-4">
           <h1 className="text-5xl mb-4">Ostatnio dodane wydarzenia</h1>
-          <p className="text-xl opacity-90"></p>
           <div className="mt-6">
             <Link to="/events">
-              <Button variant="secondary">Przeglądaj wszystkie wydarzenia</Button>
+              <Button variant="secondary">Przegladaj wszystkie wydarzenia</Button>
             </Link>
           </div>
         </div>
       </div>
 
       <div className="container mx-auto px-4 py-8">
-        <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
-          {categories.map((category) => (
-            <Button
-              key={category}
-              variant={selectedCategory === category ? "default" : "outline"}
-              onClick={() => setSelectedCategory(category)}
-              className="whitespace-nowrap"
-            >
-              {category}
-            </Button>
-          ))}
-        </div>
-
         {isLoading && (
           <div className="text-center py-16">
-            <p className="text-gray-500 text-lg">Ładowanie wydarzeń...</p>
+            <p className="text-gray-500 text-lg">Ladowanie wydarzen...</p>
           </div>
         )}
 
@@ -180,7 +164,7 @@ export function Home() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {!isLoading &&
             !error &&
-            filteredEvents.map((event) => {
+            latestEvents.map((event) => {
               const minTicketPrice = event.ticketTypes.length
                 ? Math.min(...event.ticketTypes.map((ticket) => Number(ticket.price)))
                 : event.ticketPrice;
@@ -211,12 +195,12 @@ export function Home() {
                     <div className="flex items-center justify-between mb-3">
                       <Badge>{event.category}</Badge>
                       <span className="text-sm text-gray-600">
-                        Od {minTicketPrice ?? 0} zł | Łącznie biletów: {totalTicketsCount}
+                        Od {minTicketPrice ?? 0} zl | Lacznie biletow: {totalTicketsCount}
                       </span>
                     </div>
                     <h3 className="text-xl mb-3">{event.title}</h3>
                     <p className="text-xs text-gray-500 mb-3">
-                      Dodane przez {event.creatorUsername} dnia{" "}
+                      Dodane przez {event.creatorUsername} dnia {" "}
                       {Number.isNaN(createdDate.getTime())
                         ? "brak daty"
                         : createdDate.toLocaleDateString("pl-PL")}
@@ -245,7 +229,7 @@ export function Home() {
                   </CardContent>
                   <CardFooter className="p-6 pt-0">
                     <Link to={`/event/${event.id}`} className="w-full">
-                      <Button className="w-full">Sprawdź więcej</Button>
+                      <Button className="w-full">Sprawdz wiecej</Button>
                     </Link>
                   </CardFooter>
                 </Card>
@@ -253,13 +237,12 @@ export function Home() {
             })}
         </div>
 
-        {!isLoading && !error && filteredEvents.length === 0 && (
+        {!isLoading && !error && latestEvents.length === 0 && (
           <div className="text-center py-16">
-            <p className="text-gray-500 text-lg">Brak wydarzeń w tej kategorii.</p>
+            <p className="text-gray-500 text-lg">Brak nadchodzacych wydarzen.</p>
           </div>
         )}
       </div>
     </div>
   );
 }
-
