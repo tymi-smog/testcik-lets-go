@@ -1,4 +1,4 @@
-import { Link } from 'react-router';
+﻿import { Link } from 'react-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardFooter } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -123,7 +123,7 @@ export function Events() {
           category: event.category || 'Inne',
           date: event.date,
           createdAt: event.created_at || event.date,
-          creatorUsername: event.creator_username || 'Nieznany uzytkownik',
+          creatorUsername: event.creator_username || 'Nieznany użytkownik',
           city: event.city || '',
           venue: event.venue || event.location || 'Brak lokalizacji',
           image: event.image_url || event.image || fallbackImage,
@@ -282,7 +282,7 @@ export function Events() {
     <div className="min-h-screen bg-gray-50">
       <div className="bg-[#041f14] text-white py-16">
         <div className="container mx-auto px-4">
-          <h1 className="text-5xl mb-4">Wszystkie wydarzenia</h1>
+          <h1 className="text-5xl mb-4">Wszystkie nadchodzące wydarzenia</h1>
           <p className="text-xl opacity-90">Przeglądaj pełną listę i wybierz coś dla siebie.</p>
         </div>
       </div>
@@ -295,16 +295,16 @@ export function Events() {
               onChange={(e) => setSortBy(e.target.value as SortOption)}
               className="border rounded-md px-3 py-2"
             >
-              <option value="dateAsc">Data: od najblizszych</option>
+              <option value="dateAsc">Data: od najbliższych</option>
               <option value="dateDesc">Data: od najdalszych w czasie</option>
               <option value="createdDesc">Ostatnio dodane</option>
-              <option value="priceAsc">Cena biletu: rosnaco</option>
-              <option value="priceDesc">Cena biletu: malejaco</option>
+              <option value="priceAsc">Cena biletu: rosnąco</option>
+              <option value="priceDesc">Cena biletu: malejąco</option>
               <option value="typeAsc">Rodzaj: alfabetycznie</option>
-              <option value="availableAsc">Dostepne bilety: rosnaco</option>
-              <option value="availableDesc">Dostepne bilety: malejaco</option>
-              <option value="soldAsc">Sprzedane bilety: rosnaco</option>
-              <option value="soldDesc">Sprzedane bilety: malejaco</option>
+              <option value="availableAsc">Dostępne bilety: rosnąco</option>
+              <option value="availableDesc">Dostępne bilety: malejąco</option>
+              <option value="soldAsc">Sprzedane bilety: rosnąco</option>
+              <option value="soldDesc">Sprzedane bilety: malejąco</option>
             </select>
             <select
               value={categoryFilter}
@@ -350,7 +350,7 @@ export function Events() {
               type="number"
               min="0"
               step="1"
-              placeholder="Dostepne bilety od"
+              placeholder="Dostępne bilety od"
               value={availableFrom}
               onChange={(e) => setAvailableFrom(e.target.value)}
               className="border rounded-md px-3 py-2"
@@ -359,7 +359,7 @@ export function Events() {
               type="number"
               min="0"
               step="1"
-              placeholder="Dostepne bilety do"
+              placeholder="Dostępne bilety do"
               value={availableTo}
               onChange={(e) => setAvailableTo(e.target.value)}
               className="border rounded-md px-3 py-2"
@@ -446,10 +446,10 @@ export function Events() {
                     </div>
                     <h3 className="text-xl mb-3">{event.title}</h3>
                     <p className="text-xs text-gray-500 mb-3">
-                      Dodane przez {event.creatorUsername} dnia{" "}
+                      Dodane przez {event.creatorUsername} dnia{' '}
                       {Number.isNaN(createdDate.getTime())
-                        ? "brak daty"
-                        : createdDate.toLocaleDateString("pl-PL")}
+                        ? 'brak daty'
+                        : createdDate.toLocaleDateString('pl-PL')}
                     </p>
                     <div className="space-y-2 text-sm text-gray-600">
                       <div className="flex items-center gap-2">
@@ -485,7 +485,7 @@ export function Events() {
 
         {!isLoading && !error && processedEvents.length === 0 && (
           <div className="text-center py-16">
-            <p className="text-gray-500 text-lg">Brak wydarzeń dla wybranych filtrow.</p>
+            <p className="text-gray-500 text-lg">Brak wydarzeń dla wybranych filtrów.</p>
           </div>
         )}
       </div>

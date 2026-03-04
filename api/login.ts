@@ -30,12 +30,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const user = users[0];
     if (!user) {
-      return res.status(401).json({ error: "Nieprawidlowy login" });
+      return res.status(401).json({ error: "Nieprawidłowy login" });
     }
 
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) {
-      return res.status(401).json({ error: "Nieprawidlowe haslo" });
+      return res.status(401).json({ error: "Nieprawidłowe hasło" });
     }
 
     const resolvedUserId = Number(user.user_id ?? user.id);

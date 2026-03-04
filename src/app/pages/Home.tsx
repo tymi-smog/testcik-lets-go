@@ -75,7 +75,7 @@ export function Home() {
 
         const response = await fetch("/api/events");
         if (!response.ok) {
-          throw new Error(`Nie udalo sie pobrac wydarzen (${response.status})`);
+          throw new Error(`Nie udało się pobrać wydarzeń (${response.status})`);
         }
 
         const data = (await response.json()) as ApiEvent[];
@@ -86,7 +86,7 @@ export function Home() {
           date: event.date,
           createdAt: Date.parse(event.created_at || event.date || ""),
           createdAtRaw: event.created_at || event.date,
-          creatorUsername: event.creator_username || "Nieznany uzytkownik",
+          creatorUsername: event.creator_username || "Nieznany użytkownik",
           city: event.city || "",
           venue: event.venue || event.location || "Brak lokalizacji",
           image: event.image_url || event.image || fallbackImage,
@@ -102,7 +102,7 @@ export function Home() {
         }
       } catch (err) {
         if (mounted) {
-          setError(err instanceof Error ? err.message : "Wystapil nieznany blad");
+          setError(err instanceof Error ? err.message : "Wystąpił nieznany błąd");
           setEvents([]);
         }
       } finally {
@@ -142,7 +142,7 @@ export function Home() {
           <h1 className="text-5xl mb-4">Ostatnio dodane wydarzenia</h1>
           <div className="mt-6">
             <Link to="/events">
-              <Button variant="secondary">Przegladaj wszystkie wydarzenia</Button>
+              <Button variant="secondary">Przeglądaj wszystkie wydarzenia</Button>
             </Link>
           </div>
         </div>
@@ -151,7 +151,7 @@ export function Home() {
       <div className="container mx-auto px-4 py-8">
         {isLoading && (
           <div className="text-center py-16">
-            <p className="text-gray-500 text-lg">Ladowanie wydarzen...</p>
+            <p className="text-gray-500 text-lg">Ładowanie wydarzeń...</p>
           </div>
         )}
 
@@ -195,7 +195,7 @@ export function Home() {
                     <div className="flex items-center justify-between mb-3">
                       <Badge>{event.category}</Badge>
                       <span className="text-sm text-gray-600">
-                        Od {minTicketPrice ?? 0} zl | Lacznie biletow: {totalTicketsCount}
+                        Od {minTicketPrice ?? 0} zł | Łącznie biletów: {totalTicketsCount}
                       </span>
                     </div>
                     <h3 className="text-xl mb-3">{event.title}</h3>
@@ -229,7 +229,7 @@ export function Home() {
                   </CardContent>
                   <CardFooter className="p-6 pt-0">
                     <Link to={`/event/${event.id}`} className="w-full">
-                      <Button className="w-full">Sprawdz wiecej</Button>
+                      <Button className="w-full">Sprawdź więcej</Button>
                     </Link>
                   </CardFooter>
                 </Card>
@@ -239,7 +239,7 @@ export function Home() {
 
         {!isLoading && !error && latestEvents.length === 0 && (
           <div className="text-center py-16">
-            <p className="text-gray-500 text-lg">Brak nadchodzacych wydarzen.</p>
+            <p className="text-gray-500 text-lg">Brak nadchodzących wydarzeń.</p>
           </div>
         )}
       </div>

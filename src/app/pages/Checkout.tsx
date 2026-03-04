@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { useCart } from "../context/CartContext";
 import { Button } from "../components/ui/button";
@@ -29,13 +29,13 @@ export function Checkout() {
     if (isLoading) return;
 
     if (!user) {
-      toast.error("Musisz byc zalogowany, aby kupic bilety.");
+      toast.error("Musisz być zalogowany, aby kupić bilety.");
       navigate("/login");
       return;
     }
 
     if (!user.is_verified) {
-      toast.error("Zweryfikuj konto e-mail, aby kupowac bilety.");
+      toast.error("Zweryfikuj konto e-mail, aby kupować bilety.");
       navigate("/");
     }
   }, [isLoading, user, navigate]);
@@ -49,13 +49,13 @@ export function Checkout() {
     }
 
     if (!token) {
-      toast.error("Brak sesji. Zaloguj sie ponownie.");
+      toast.error("Brak sesji. Zaloguj się ponownie.");
       navigate("/login");
       return;
     }
 
     if (!user?.is_verified) {
-      toast.error("Konto musi byc zweryfikowane.");
+      toast.error("Konto musi być zweryfikowane.");
       return;
     }
 
@@ -82,10 +82,10 @@ export function Checkout() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result?.error || "Nie udało sie zrealizowac płatności.");
+        throw new Error(result?.error || "Nie udało się zrealizować płatności.");
       }
 
-      toast.success("Zakup zakończony. Potwierdzenie wysłalismy na e-mail.");
+      toast.success("Zakup zakończony. Potwierdzenie wysłaliśmy na e-mail.");
       clearCart();
       navigate("/");
     } catch (error) {
@@ -113,7 +113,7 @@ export function Checkout() {
             Tylko zalogowani i zweryfikowani użytkownicy mogą kupować bilety.
           </p>
           <Button onClick={() => navigate(user ? "/" : "/login")}>
-            {user ? "Wróć na stronę glowną" : "Przejdź do logowania"}
+            {user ? "Wróć na stronę główną" : "Przejdź do logowania"}
           </Button>
         </div>
       </div>
@@ -175,7 +175,7 @@ export function Checkout() {
                           +
                         </button>
                       </div>
-                      <p className="w-24 text-right">{(item.price * item.quantity).toFixed(2)} zl</p>
+                      <p className="w-24 text-right">{(item.price * item.quantity).toFixed(2)} zł</p>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -261,7 +261,7 @@ export function Checkout() {
 
                   <Button type="submit" className="w-full" size="lg" disabled={isProcessing}>
                     <CreditCard className="size-5 mr-2" />
-                    {isProcessing ? "Przetwarzanie..." : `Zaplac ${grandTotal.toFixed(2)} zl`}
+                    {isProcessing ? "Przetwarzanie..." : `Zapłać ${grandTotal.toFixed(2)} zł`}
                   </Button>
                 </form>
               </CardContent>
@@ -292,7 +292,7 @@ export function Checkout() {
 
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Suma biletow</span>
+                    <span className="text-gray-600">Suma biletów</span>
                     <span>{getTotal().toFixed(2)} zł</span>
                   </div>
                   <div className="flex justify-between">

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router";
 import { useCart } from "../context/CartContext";
 import { Button } from "../components/ui/button";
@@ -103,7 +103,7 @@ export function EventDetail() {
           category: rawEvent.category || "Inne",
           date: rawEvent.date,
           createdAt: rawEvent.created_at || rawEvent.date,
-          creatorUsername: rawEvent.creator_username || "Nieznany uzytkownik",
+          creatorUsername: rawEvent.creator_username || "Nieznany użytkownik",
           city: rawEvent.city || "",
           venue: rawEvent.venue || rawEvent.location || "Brak lokalizacji",
           image: rawEvent.image_url || rawEvent.image || fallbackImage,

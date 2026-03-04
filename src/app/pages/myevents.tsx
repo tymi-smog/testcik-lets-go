@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { useAuth } from "../../context/AuthContext";
 
@@ -116,7 +116,7 @@ export function MyEvents() {
       setLoadingEvents(true);
       const response = await fetch("/api/events");
       if (!response.ok) {
-        throw new Error("Nie udalo sie pobrac wydarzen");
+        throw new Error("Nie udało się pobrać wydarzeń");
       }
 
       const data = (await response.json()) as MyEvent[];
@@ -351,7 +351,7 @@ export function MyEvents() {
 
     const authToken = token ?? localStorage.getItem("token");
     if (!authToken) {
-      alert("Musisz byc zalogowany, aby dodawac wydarzenia.");
+      alert("Musisz być zalogowany, aby dodawać wydarzenia.");
       return;
     }
 
@@ -384,16 +384,16 @@ export function MyEvents() {
 
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        alert(data?.error ?? "Nie udalo sie utworzyc wydarzenia.");
+        alert(data?.error ?? "Nie udało się utworzyć wydarzenia.");
         return;
       }
 
       clearForm();
       await loadMyEvents(user?.userId);
-      alert(editingEventId ? "Wydarzenie zostalo zaktualizowane." : "Wydarzenie zostalo dodane.");
+      alert(editingEventId ? "Wydarzenie zostało zaktualizowane." : "Wydarzenie zostało dodane.");
     } catch (error) {
       console.error(error);
-      alert("Wystapil blad podczas zapisu wydarzenia.");
+      alert("Wystąpił błąd podczas zapisu wydarzenia.");
     } finally {
       setSubmitting(false);
     }
@@ -402,7 +402,7 @@ export function MyEvents() {
   if (isLoading) {
     return (
       <div className="max-w-4xl mx-auto py-10">
-        <p className="text-gray-500">Ladowanie...</p>
+        <p className="text-gray-500">Ładowanie...</p>
       </div>
     );
   }
@@ -411,9 +411,9 @@ export function MyEvents() {
     return (
       <div className="max-w-4xl mx-auto py-10 space-y-4">
         <h1 className="text-2xl font-semibold">Moje wydarzenia</h1>
-        <p className="text-gray-600">Musisz byc zalogowany, aby dodawac wydarzenia.</p>
+        <p className="text-gray-600">Musisz być zalogowany, aby dodawać wydarzenia.</p>
         <Link to="/login" className="inline-block rounded-md bg-black px-4 py-2 text-white">
-          Przejdz do logowania
+          Przejdź do logowania
         </Link>
       </div>
     );
@@ -425,7 +425,7 @@ export function MyEvents() {
         <div className="max-w-xl text-center space-y-3">
           <h1 className="text-2xl font-semibold">Weryfikacja konta jest wymagana</h1>
           <p className="text-gray-600">
-            Aby tworzyc nowe wydarzenia, najpierw zweryfikuj swoj adres e-mail.
+            Aby tworzyć nowe wydarzenia, najpierw zweryfikuj swój adres e-mail.
           </p>
         </div>
       </div>
@@ -438,8 +438,8 @@ export function MyEvents() {
         <h1 className="text-2xl font-semibold">Moje wydarzenia</h1>
         <p className="text-gray-600">
           {user.is_admin
-            ? "Jako admin mozesz edytowac wszystkie wydarzenia."
-            : "Dodaj nowe wydarzenie. Bedzie widoczne na stronie glownej i liscie wszystkich wydarzen."}
+            ? "Jako admin możesz edytować wszystkie wydarzenia."
+            : "Dodaj nowe wydarzenie. Będzie widoczne na stronie głównej i liście wszystkich wydarzeń."}
         </p>
       </section>
 
@@ -452,7 +452,7 @@ export function MyEvents() {
               onClick={clearForm}
               className="rounded-md border px-3 py-1.5 text-sm hover:bg-gray-100"
             >
-              Anuluj edycje
+              Anuluj edycję
             </button>
           )}
         </div>
@@ -462,7 +462,7 @@ export function MyEvents() {
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Tytul wydarzenia"
+            placeholder="Tytuł wydarzenia"
             className="w-full border rounded-md p-2"
             required
           />
@@ -511,7 +511,7 @@ export function MyEvents() {
 
           <div className="space-y-3 rounded-md border p-4">
             <div className="flex items-center justify-between">
-              <h3 className="font-medium">Typy biletow</h3>
+              <h3 className="font-medium">Typy biletów</h3>
               <button
                 type="button"
                 onClick={addTicketRow}
@@ -531,7 +531,7 @@ export function MyEvents() {
                     disabled={ticketTypes.length === 1}
                     className="rounded-md border px-2 py-1 text-xs hover:bg-gray-100 disabled:opacity-50"
                   >
-                    Usun
+                    Usuń
                   </button>
                 </div>
 
@@ -561,7 +561,7 @@ export function MyEvents() {
                     step="1"
                     value={ticket.available}
                     onChange={(e) => updateTicketRow(index, "available", e.target.value)}
-                    placeholder="Ilosc"
+                    placeholder="Ilość"
                     className="w-full border rounded-md p-2"
                     required
                   />
@@ -596,16 +596,16 @@ export function MyEvents() {
               onChange={(e) => setSortBy(e.target.value as SortOption)}
               className="border rounded-md px-3 py-2"
             >
-              <option value="dateAsc">Data: od najblizszych</option>
+              <option value="dateAsc">Data: od najbliższych</option>
               <option value="dateDesc">Data: od najdalszych w czasie</option>
               <option value="createdDesc">Ostatnio dodane</option>
-              <option value="priceAsc">Cena biletu: rosnaco</option>
-              <option value="priceDesc">Cena biletu: malejaco</option>
+              <option value="priceAsc">Cena biletu: rosnąco</option>
+              <option value="priceDesc">Cena biletu: malejąco</option>
               <option value="typeAsc">Rodzaj: alfabetycznie</option>
-              <option value="availableAsc">Dostepne bilety: rosnaco</option>
-              <option value="availableDesc">Dostepne bilety: malejaco</option>
-              <option value="soldAsc">Sprzedane bilety: rosnaco</option>
-              <option value="soldDesc">Sprzedane bilety: malejaco</option>
+              <option value="availableAsc">Dostępne bilety: rosnąco</option>
+              <option value="availableDesc">Dostępne bilety: malejąco</option>
+              <option value="soldAsc">Sprzedane bilety: rosnąco</option>
+              <option value="soldDesc">Sprzedane bilety: malejąco</option>
             </select>
             <select
               value={categoryFilter}
@@ -651,7 +651,7 @@ export function MyEvents() {
               type="number"
               min="0"
               step="1"
-              placeholder="Dostepne bilety od"
+              placeholder="Dostępne bilety od"
               value={availableFrom}
               onChange={(e) => setAvailableFrom(e.target.value)}
               className="border rounded-md px-3 py-2"
@@ -660,7 +660,7 @@ export function MyEvents() {
               type="number"
               min="0"
               step="1"
-              placeholder="Dostepne bilety do"
+              placeholder="Dostępne bilety do"
               value={availableTo}
               onChange={(e) => setAvailableTo(e.target.value)}
               className="border rounded-md px-3 py-2"
@@ -698,18 +698,18 @@ export function MyEvents() {
               }}
               className="rounded-md border px-3 py-2 text-sm hover:bg-gray-100"
             >
-              Wyczysc filtry
+              Wyczyść filtry
             </button>
           </div>
         </div>
 
-        {loadingEvents && <p className="text-gray-500">Ladowanie wydarzen...</p>}
+        {loadingEvents && <p className="text-gray-500">Ładowanie wydarzeń...</p>}
 
         {!loadingEvents && events.length === 0 && (
-          <div className="border rounded-lg p-6 text-gray-500">Nie dodales jeszcze zadnego wydarzenia.</div>
+          <div className="border rounded-lg p-6 text-gray-500">Nie dodałeś jeszcze żadnego wydarzenia.</div>
         )}
         {!loadingEvents && events.length > 0 && processedEvents.length === 0 && (
-          <div className="border rounded-lg p-6 text-gray-500">Brak wydarzen dla wybranych filtrow.</div>
+          <div className="border rounded-lg p-6 text-gray-500">Brak wydarzeń dla wybranych filtrów.</div>
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

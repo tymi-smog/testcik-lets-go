@@ -53,9 +53,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         await resend.emails.send({
           from: "register@panbilecik.eu",
           to: currentEmail,
-          subject: "Potwierdzenie zmiany nazwy uzytkownika - PanBilecik",
+          subject: "Potwierdzenie zmiany nazwy użytkownika - PanBilecik",
           html: `
-            <h2>Zmiana nazwy uzytkownika zostala zapisana</h2>
+            <h2>Zmiana nazwy użytkownika została zapisana</h2>
             <p>Nowa nazwa konta: <strong>${username}</strong></p>
           `,
         });
@@ -64,8 +64,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({
         success: true,
         message: usernameChanged
-          ? "Nazwa uzytkownika zostala zapisana, wyslalismy potwierdzenie e-mail."
-          : "Dane zostaly zaktualizowane.",
+          ? "Nazwa użytkownika została zapisana, wysłaliśmy potwierdzenie e-mail."
+          : "Dane zostały zaktualizowane.",
       });
     }
 
@@ -87,10 +87,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     await resend.emails.send({
       from: "PanBilecik <register@panbilecik.eu>",
       to: email,
-      subject: "Potwierdz zmiane emaila - PanBilecik",
+      subject: "Potwierdź zmianę e-maila - PanBilecik",
       html: `
         <h2>Zmiana emaila</h2>
-        <p>Kliknij ponizej aby potwierdzic zmiane:</p>
+        <p>Kliknij poniżej, aby potwierdzić zmianę:</p>
         <a href="${link}">${link}</a>
       `,
     });
@@ -99,9 +99,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       await resend.emails.send({
         from: "register@panbilecik.eu",
         to: currentEmail,
-        subject: "Potwierdzenie zmiany nazwy uzytkownika - PanBilecik",
+        subject: "Potwierdzenie zmiany nazwy użytkownika - PanBilecik",
         html: `
-          <h2>Zmiana nazwy uzytkownika zostala zapisana</h2>
+          <h2>Zmiana nazwy użytkownika została zapisana</h2>
           <p>Nowa nazwa konta: <strong>${username}</strong></p>
         `,
       });
@@ -109,7 +109,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     return res.status(200).json({
       success: true,
-      message: "Wyslalismy email potwierdzajacy zmiane adresu.",
+      message: "Wysłaliśmy e-mail potwierdzający zmianę adresu.",
     });
   } catch (err) {
     console.error(err);
