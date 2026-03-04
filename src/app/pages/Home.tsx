@@ -105,17 +105,21 @@ export function Home() {
     };
   }, []);
 
-  const latestEvents = useMemo(
-    () =>
-      [...events]
-        .sort((a, b) => {
-          const aDate = Number.isNaN(a.createdAt) ? 0 : a.createdAt;
-          const bDate = Number.isNaN(b.createdAt) ? 0 : b.createdAt;
-          return bDate - aDate;
-        })
-        .slice(0, 10),
-    [events]
-  );
+  const latestEvents = useMemo(() => {
+    const now = Date.now();
+
+    return [...events]
+      .filter((event) => {
+        const eventTime = Date.parse(event.date);
+        return Number.isFinite(eventTime) && eventTime > now;
+      })
+      .sort((a, b) => {
+        const aDate = Number.isNaN(a.createdAt) ? 0 : a.createdAt;
+        const bDate = Number.isNaN(b.createdAt) ? 0 : b.createdAt;
+        return bDate - aDate;
+      })
+      .slice(0, 10);
+  }, [events]);
 
   const categories = useMemo(() => {
     const unique = [...new Set(latestEvents.map((event) => event.category))];

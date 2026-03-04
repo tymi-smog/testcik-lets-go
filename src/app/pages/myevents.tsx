@@ -419,6 +419,19 @@ export function MyEvents() {
     );
   }
 
+  if (!user.is_verified) {
+    return (
+      <div className="min-h-[70vh] flex items-center justify-center px-4">
+        <div className="max-w-xl text-center space-y-3">
+          <h1 className="text-2xl font-semibold">Weryfikacja konta jest wymagana</h1>
+          <p className="text-gray-600">
+            Aby tworzyc nowe wydarzenia, najpierw zweryfikuj swoj adres e-mail.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto py-10 space-y-10">
       <section className="space-y-4">

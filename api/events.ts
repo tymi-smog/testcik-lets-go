@@ -360,6 +360,9 @@ export default async function handler(req: any, res: any) {
       if (!authUser) {
         return res.status(401).json({ error: "Unauthorized" });
       }
+      if (!authUser.is_verified) {
+        return res.status(403).json({ error: "Email not verified" });
+      }
 
       const body = parseRequestBody(req.body);
       const title = String(body?.title ?? "").trim();
