@@ -16,6 +16,7 @@ type MyEvent = {
   creator_username?: string | null;
   image_url?: string | null;
   image?: string | null;
+  sold_tickets?: number | string | null;
   ticketTypes?: Array<{
     id?: string | number;
     name: string;
@@ -58,18 +59,22 @@ function getMyEventStats(event: MyEvent) {
     const available = Number(ticket.available ?? 0);
     return sum + (Number.isFinite(available) ? available : 0);
   }, 0);
-  const totalSoldCount = tickets.reduce((sum, ticket) => {
-    const sold = Number(ticket.sold);
-    if (Number.isFinite(sold) && sold >= 0) {
-      return sum + sold;
-    }
-    const initialAvailable = Number(ticket.initial_available);
-    const available = Number(ticket.available ?? 0);
-    if (Number.isFinite(initialAvailable) && Number.isFinite(available)) {
-      return sum + Math.max(initialAvailable - available, 0);
-    }
-    return sum;
-  }, 0);
+  const eventSoldTickets = Number(event.sold_tickets);
+  const totalSoldCount =
+    Number.isFinite(eventSoldTickets) && eventSoldTickets >= 0
+      ? eventSoldTickets
+      : tickets.reduce((sum, ticket) => {
+          const sold = Number(ticket.sold);
+          if (Number.isFinite(sold) && sold >= 0) {
+            return sum + sold;
+          }
+          const initialAvailable = Number(ticket.initial_available);
+          const available = Number(ticket.available ?? 0);
+          if (Number.isFinite(initialAvailable) && Number.isFinite(available)) {
+            return sum + Math.max(initialAvailable - available, 0);
+          }
+          return sum;
+        }, 0);
 
   return {
     minTicketPrice: Number.isFinite(minTicketPrice) ? minTicketPrice : 0,

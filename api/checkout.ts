@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { sql } from "../lib/db.js";
 import { resend } from "../lib/resend.js";
 import { authenticateRequest } from "../lib/auth.js";
+import { ensureEventSalesColumns } from "../lib/event-sales.js";
 import { ensureTicketPurchasesTable } from "../lib/ticket-purchases.js";
 
 type CheckoutItem = {
@@ -53,6 +54,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
+    await ensureEventSalesColumns();
     await sql`BEGIN`;
 
     const purchasedLines: Array<{
@@ -108,6 +110,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           error: "Brak wystarczającej liczby biletów lub bilet nie istnieje",
         });
       }
+
+      await sql`
+        UPDATE events
+        SET
+          available_tickets = GREATEST(COALESCE(available_tickets, 0) - ${item.quantity}, 0),
+          sold_tickets = COALESCE(sold_tickets, 0) + ${item.quantity}
+        WHERE id = ${item.eventId}
+      `;
 
       const row = rows[0] as {
         event_id: number;

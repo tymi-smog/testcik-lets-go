@@ -1,5 +1,6 @@
 import { sql } from "../lib/db.js";
 import { authenticateRequest } from "../lib/auth.js";
+import { ensureEventSalesColumns } from "../lib/event-sales.js";
 
 type EventRow = {
   id: number | string;
@@ -13,6 +14,7 @@ type EventRow = {
   date: string;
   ticket_price?: number | string | null;
   available_tickets?: number | string | null;
+  sold_tickets?: number | string | null;
   created_at?: string | null;
   image_url?: string | null;
   category?: string | null;
@@ -60,6 +62,7 @@ function parseLocationParts(input: { city?: string; venue?: string; location?: s
 export default async function handler(req: any, res: any) {
   if (req.method === "GET") {
     try {
+      await ensureEventSalesColumns();
       const columns = await sql`
         SELECT column_name
         FROM information_schema.columns
@@ -72,6 +75,7 @@ export default async function handler(req: any, res: any) {
       const hasLocation = columnNames.has("location");
       const hasCity = columnNames.has("city");
       const hasVenue = columnNames.has("venue");
+      const hasSoldTickets = columnNames.has("sold_tickets");
 
       let events: EventRow[] = [];
 
@@ -88,6 +92,7 @@ export default async function handler(req: any, res: any) {
               events.date,
               events.ticket_price,
               events.available_tickets,
+              events.sold_tickets,
               events.created_at,
               events.image AS image_url,
               categories.name AS category
@@ -107,6 +112,7 @@ export default async function handler(req: any, res: any) {
               events.date,
               events.ticket_price,
               events.available_tickets,
+              events.sold_tickets,
               events.created_at,
               events.image AS image_url,
               categories.name AS category
@@ -128,6 +134,7 @@ export default async function handler(req: any, res: any) {
               events.date,
               events.ticket_price,
               events.available_tickets,
+              events.sold_tickets,
               events.created_at,
               events.image_url AS image_url,
               categories.name AS category
@@ -147,6 +154,7 @@ export default async function handler(req: any, res: any) {
               events.date,
               events.ticket_price,
               events.available_tickets,
+              events.sold_tickets,
               events.created_at,
               events.image_url AS image_url,
               categories.name AS category
@@ -168,6 +176,7 @@ export default async function handler(req: any, res: any) {
               events.date,
               events.ticket_price,
               events.available_tickets,
+              events.sold_tickets,
               events.created_at,
               NULL::text AS image_url,
               categories.name AS category
@@ -187,6 +196,7 @@ export default async function handler(req: any, res: any) {
               events.date,
               events.ticket_price,
               events.available_tickets,
+              events.sold_tickets,
               events.created_at,
               NULL::text AS image_url,
               categories.name AS category
@@ -343,6 +353,7 @@ export default async function handler(req: any, res: any) {
           creator_username: userMap.get(Number(event.creator_id)) ?? null,
           image_url: event.image_url || null,
           image: event.image_url || `https://picsum.photos/seed/event-${event.id}/1200/675`,
+          sold_tickets: hasSoldTickets ? Number(event.sold_tickets ?? 0) : 0,
           ticketTypes: eventTicketTypes,
         };
       });
@@ -356,6 +367,7 @@ export default async function handler(req: any, res: any) {
 
   if (req.method === "POST") {
     try {
+      await ensureEventSalesColumns();
       const authUser = await authenticateRequest(req);
       if (!authUser) {
         return res.status(401).json({ error: "Unauthorized" });
@@ -463,6 +475,7 @@ export default async function handler(req: any, res: any) {
               date,
               ticket_price,
               available_tickets,
+              sold_tickets,
               image
             )
             VALUES (
@@ -474,6 +487,7 @@ export default async function handler(req: any, res: any) {
               ${parsedDate.toISOString()},
               ${ticketPrice},
               ${availableTickets},
+              0,
               ${imageUrl || null}
             )
             RETURNING id
@@ -488,6 +502,7 @@ export default async function handler(req: any, res: any) {
               date,
               ticket_price,
               available_tickets,
+              sold_tickets,
               image
             )
             VALUES (
@@ -498,6 +513,7 @@ export default async function handler(req: any, res: any) {
               ${parsedDate.toISOString()},
               ${ticketPrice},
               ${availableTickets},
+              0,
               ${imageUrl || null}
             )
             RETURNING id
@@ -515,6 +531,7 @@ export default async function handler(req: any, res: any) {
               date,
               ticket_price,
               available_tickets,
+              sold_tickets,
               image_url
             )
             VALUES (
@@ -526,6 +543,7 @@ export default async function handler(req: any, res: any) {
               ${parsedDate.toISOString()},
               ${ticketPrice},
               ${availableTickets},
+              0,
               ${imageUrl || null}
             )
             RETURNING id
@@ -540,6 +558,7 @@ export default async function handler(req: any, res: any) {
               date,
               ticket_price,
               available_tickets,
+              sold_tickets,
               image_url
             )
             VALUES (
@@ -550,6 +569,7 @@ export default async function handler(req: any, res: any) {
               ${parsedDate.toISOString()},
               ${ticketPrice},
               ${availableTickets},
+              0,
               ${imageUrl || null}
             )
             RETURNING id
@@ -566,7 +586,8 @@ export default async function handler(req: any, res: any) {
               location,
               date,
               ticket_price,
-              available_tickets
+              available_tickets,
+              sold_tickets
             )
             VALUES (
               ${authUser.userId},
@@ -576,7 +597,8 @@ export default async function handler(req: any, res: any) {
               ${location},
               ${parsedDate.toISOString()},
               ${ticketPrice},
-              ${availableTickets}
+              ${availableTickets},
+              0
             )
             RETURNING id
           `;
@@ -589,7 +611,8 @@ export default async function handler(req: any, res: any) {
               description,
               date,
               ticket_price,
-              available_tickets
+              available_tickets,
+              sold_tickets
             )
             VALUES (
               ${authUser.userId},
@@ -598,7 +621,8 @@ export default async function handler(req: any, res: any) {
               ${description},
               ${parsedDate.toISOString()},
               ${ticketPrice},
-              ${availableTickets}
+              ${availableTickets},
+              0
             )
             RETURNING id
           `;
@@ -685,6 +709,7 @@ export default async function handler(req: any, res: any) {
 
   if (req.method === "PUT") {
     try {
+      await ensureEventSalesColumns();
       const authUser = await authenticateRequest(req);
       if (!authUser) {
         return res.status(401).json({ error: "Unauthorized" });

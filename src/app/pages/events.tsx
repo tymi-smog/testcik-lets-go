@@ -27,6 +27,7 @@ type ApiEvent = {
   image_url?: string | null;
   image?: string | null;
   ticket_price?: number | string | null;
+  sold_tickets?: number | string | null;
   ticketTypes?: ApiTicketType[];
 };
 
@@ -42,6 +43,7 @@ type EventsPageEvent = {
   image: string;
   ticketTypes: ApiTicketType[];
   ticketPrice: number | null;
+  soldTickets: number;
 };
 
 const fallbackImage =
@@ -69,18 +71,21 @@ function getEventStats(event: EventsPageEvent) {
     return sum + (Number.isFinite(available) ? available : 0);
   }, 0);
 
-  const totalSoldCount = event.ticketTypes.reduce((sum, ticket) => {
-    const sold = Number(ticket.sold);
-    if (Number.isFinite(sold) && sold >= 0) {
-      return sum + sold;
-    }
-    const initialAvailable = Number(ticket.initial_available);
-    const available = Number(ticket.available ?? 0);
-    if (Number.isFinite(initialAvailable) && Number.isFinite(available)) {
-      return sum + Math.max(initialAvailable - available, 0);
-    }
-    return sum;
-  }, 0);
+  const totalSoldCount =
+    Number.isFinite(event.soldTickets) && event.soldTickets >= 0
+      ? event.soldTickets
+      : event.ticketTypes.reduce((sum, ticket) => {
+          const sold = Number(ticket.sold);
+          if (Number.isFinite(sold) && sold >= 0) {
+            return sum + sold;
+          }
+          const initialAvailable = Number(ticket.initial_available);
+          const available = Number(ticket.available ?? 0);
+          if (Number.isFinite(initialAvailable) && Number.isFinite(available)) {
+            return sum + Math.max(initialAvailable - available, 0);
+          }
+          return sum;
+        }, 0);
 
   return {
     minTicketPrice: Number.isFinite(minTicketPrice) ? minTicketPrice : 0,
@@ -132,6 +137,7 @@ export function Events() {
             event.ticket_price === null || event.ticket_price === undefined
               ? null
               : Number(event.ticket_price),
+          soldTickets: Number(event.sold_tickets ?? 0),
         }));
 
         if (mounted) {
