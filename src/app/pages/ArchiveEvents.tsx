@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { Calendar, Clock, MapPin, Star } from "lucide-react";
 import { Card, CardContent } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
-import { Calendar, Clock, MapPin } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
+import { toast } from "sonner";
 
 type ApiTicketType = {
   id: string | number;
@@ -43,6 +46,23 @@ type ArchiveEvent = {
   ticketPrice: number | null;
 };
 
+type RatingSummary = {
+  eventId: number;
+  averageRating: number;
+  ratingsCount: number;
+};
+
+type MyRating = {
+  eventId: number;
+  rating: number;
+  reviewText: string;
+  updatedAt: string;
+};
+
+type TicketPurchase = {
+  eventId: number;
+};
+
 type SortOption =
   | "priceAsc"
   | "priceDesc"
@@ -57,6 +77,8 @@ type SortOption =
 
 const fallbackImage =
   "https://images.unsplash.com/photo-1523580494863-6f3031224c94?auto=format&fit=crop&w=1080&q=80";
+
+const RATING_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 function getEventStats(event: ArchiveEvent) {
   const minTicketPrice = event.ticketTypes.length
@@ -88,7 +110,22 @@ function getEventStats(event: ArchiveEvent) {
   };
 }
 
+function canRateEvent(eventDate: string, hasPurchasedTicket: boolean) {
+  if (!hasPurchasedTicket) {
+    return false;
+  }
+
+  const eventTime = Date.parse(eventDate);
+  if (Number.isNaN(eventTime)) {
+    return false;
+  }
+
+  const now = Date.now();
+  return now >= eventTime && now <= eventTime + RATING_WINDOW_MS;
+}
+
 export function ArchiveEvents() {
+  const { user, token } = useAuth();
   const [events, setEvents] = useState<ArchiveEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -101,6 +138,11 @@ export function ArchiveEvents() {
   const [soldTo, setSoldTo] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("Wszystkie");
   const [locationFilter, setLocationFilter] = useState("Wszystkie");
+  const [ratingSummaries, setRatingSummaries] = useState<Record<number, RatingSummary>>({});
+  const [myRatings, setMyRatings] = useState<Record<number, MyRating>>({});
+  const [purchasedEventIds, setPurchasedEventIds] = useState<Set<number>>(new Set());
+  const [ratingDrafts, setRatingDrafts] = useState<Record<number, { rating: number; reviewText: string }>>({});
+  const [savingRatingFor, setSavingRatingFor] = useState<number | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -148,6 +190,112 @@ export function ArchiveEvents() {
       mounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadRatings = async () => {
+      try {
+        const response = await fetch("/api/event-ratings", {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+
+        if (!response.ok) {
+          throw new Error("Nie udało się pobrać ocen.");
+        }
+
+        const data = await response.json();
+        if (!mounted) {
+          return;
+        }
+
+        const summaryMap = new Map<number, RatingSummary>();
+        for (const summary of Array.isArray(data?.summaries) ? data.summaries : []) {
+          summaryMap.set(Number(summary.eventId), {
+            eventId: Number(summary.eventId),
+            averageRating: Number(summary.averageRating ?? 0),
+            ratingsCount: Number(summary.ratingsCount ?? 0),
+          });
+        }
+        setRatingSummaries(Object.fromEntries(summaryMap));
+
+        const myRatingsMap = new Map<number, MyRating>();
+        for (const item of Array.isArray(data?.myRatings) ? data.myRatings : []) {
+          myRatingsMap.set(Number(item.eventId), {
+            eventId: Number(item.eventId),
+            rating: Number(item.rating),
+            reviewText: String(item.reviewText ?? ""),
+            updatedAt: String(item.updatedAt ?? ""),
+          });
+        }
+        const normalizedMyRatings = Object.fromEntries(myRatingsMap);
+        setMyRatings(normalizedMyRatings);
+
+        setRatingDrafts((prev) => {
+          const next = { ...prev };
+          for (const item of myRatingsMap.values()) {
+            next[item.eventId] = {
+              rating: item.rating,
+              reviewText: item.reviewText,
+            };
+          }
+          return next;
+        });
+      } catch (err) {
+        if (mounted) {
+          console.error(err);
+        }
+      }
+    };
+
+    loadRatings();
+
+    return () => {
+      mounted = false;
+    };
+  }, [token]);
+
+  useEffect(() => {
+    if (!token || !user) {
+      setPurchasedEventIds(new Set());
+      return;
+    }
+
+    let mounted = true;
+    const loadPurchases = async () => {
+      try {
+        const response = await fetch("/api/my-tickets", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error("Nie udało się pobrać zakupionych biletów.");
+        }
+
+        const data = await response.json();
+        if (!mounted) {
+          return;
+        }
+
+        const ids = new Set<number>();
+        for (const item of Array.isArray(data?.items) ? (data.items as TicketPurchase[]) : []) {
+          ids.add(Number(item.eventId));
+        }
+        setPurchasedEventIds(ids);
+      } catch (err) {
+        if (mounted) {
+          console.error(err);
+        }
+      }
+    };
+
+    loadPurchases();
+    return () => {
+      mounted = false;
+    };
+  }, [token, user]);
 
   const categories = useMemo(() => {
     const now = Date.now();
@@ -252,6 +400,87 @@ export function ArchiveEvents() {
     soldFrom,
     soldTo,
   ]);
+
+  function setDraft(eventId: number, next: Partial<{ rating: number; reviewText: string }>) {
+    setRatingDrafts((prev) => ({
+      ...prev,
+      [eventId]: {
+        rating: next.rating ?? prev[eventId]?.rating ?? 0,
+        reviewText: next.reviewText ?? prev[eventId]?.reviewText ?? "",
+      },
+    }));
+  }
+
+  async function handleSaveRating(event: ArchiveEvent) {
+    if (!token) {
+      toast.error("Zaloguj się, aby ocenić wydarzenie.");
+      return;
+    }
+
+    const eventId = Number(event.id);
+    const draft = ratingDrafts[eventId];
+
+    if (!draft?.rating) {
+      toast.error("Wybierz ocenę od 1 do 5.");
+      return;
+    }
+
+    try {
+      setSavingRatingFor(eventId);
+
+      const response = await fetch("/api/event-ratings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          eventId,
+          rating: draft.rating,
+          reviewText: draft.reviewText,
+        }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data?.error || "Nie udało się zapisać oceny.");
+      }
+
+      const ratingsResponse = await fetch("/api/event-ratings", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const ratingsData = await ratingsResponse.json().catch(() => ({}));
+
+      const summaryMap = new Map<number, RatingSummary>();
+      for (const summary of Array.isArray(ratingsData?.summaries) ? ratingsData.summaries : []) {
+        summaryMap.set(Number(summary.eventId), {
+          eventId: Number(summary.eventId),
+          averageRating: Number(summary.averageRating ?? 0),
+          ratingsCount: Number(summary.ratingsCount ?? 0),
+        });
+      }
+      setRatingSummaries(Object.fromEntries(summaryMap));
+
+      const myRatingsMap = new Map<number, MyRating>();
+      for (const item of Array.isArray(ratingsData?.myRatings) ? ratingsData.myRatings : []) {
+        myRatingsMap.set(Number(item.eventId), {
+          eventId: Number(item.eventId),
+          rating: Number(item.rating),
+          reviewText: String(item.reviewText ?? ""),
+          updatedAt: String(item.updatedAt ?? ""),
+        });
+      }
+      setMyRatings(Object.fromEntries(myRatingsMap));
+
+      toast.success("Ocena została zapisana.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Wystąpił nieznany błąd.");
+    } finally {
+      setSavingRatingFor(null);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-slate-100/80">
@@ -392,6 +621,7 @@ export function ArchiveEvents() {
           {!isLoading &&
             !error &&
             processedEvents.map((event) => {
+              const eventId = Number(event.id);
               const { minTicketPrice, totalTicketsCount, totalSoldCount } = getEventStats(event);
               const eventDate = new Date(event.date);
               const createdDate = new Date(event.createdAt);
@@ -401,6 +631,14 @@ export function ArchiveEvents() {
                     hour: "2-digit",
                     minute: "2-digit",
                   });
+              const ratingSummary = ratingSummaries[eventId];
+              const myRating = myRatings[eventId];
+              const hasPurchasedTicket = purchasedEventIds.has(eventId);
+              const canRate = canRateEvent(event.date, hasPurchasedTicket);
+              const draft = ratingDrafts[eventId] ?? {
+                rating: myRating?.rating ?? 0,
+                reviewText: myRating?.reviewText ?? "",
+              };
 
               return (
                 <Card key={event.id} className="overflow-hidden">
@@ -408,7 +646,7 @@ export function ArchiveEvents() {
                     <img src={event.image} alt={event.title} className="w-full h-full object-cover" />
                   </div>
                   <CardContent className="p-6">
-                    <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center justify-between mb-3 gap-3">
                       <Badge>{event.category}</Badge>
                       <span className="text-sm text-gray-600">
                         Od {minTicketPrice} zł | Łącznie biletów: {totalTicketsCount} | Sprzedane: {totalSoldCount}
@@ -421,6 +659,18 @@ export function ArchiveEvents() {
                         ? "brak daty"
                         : createdDate.toLocaleDateString("pl-PL")}
                     </p>
+
+                    <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                      <div className="flex items-center gap-2">
+                        <Star className="size-4 fill-amber-400 text-amber-500" />
+                        <span>
+                          {ratingSummary?.ratingsCount
+                            ? `Średnia ocena: ${ratingSummary.averageRating.toFixed(2)} / 5 (${ratingSummary.ratingsCount} ocen)`
+                            : "To wydarzenie nie ma jeszcze ocen."}
+                        </span>
+                      </div>
+                    </div>
+
                     <div className="space-y-2 text-sm text-gray-600 mb-4">
                       <div className="flex items-center gap-2">
                         <Calendar className="size-4" />
@@ -443,7 +693,7 @@ export function ArchiveEvents() {
                       </div>
                     </div>
 
-                    <div className="rounded-md border p-3">
+                    <div className="rounded-md border p-3 mb-4">
                       <p className="text-sm font-medium mb-2">Bilety i ceny</p>
                       <div className="space-y-1 text-sm">
                         {event.ticketTypes.length > 0 ? (
@@ -460,6 +710,64 @@ export function ArchiveEvents() {
                           </div>
                         )}
                       </div>
+                    </div>
+
+                    <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-sm font-medium text-slate-900">Oceń wydarzenie</p>
+                        <Link to={`/event/${event.id}`} className="text-sm text-blue-700 hover:underline">
+                          Zobacz opinie
+                        </Link>
+                      </div>
+
+                      <div className="flex gap-1">
+                        {[1, 2, 3, 4, 5].map((value) => (
+                          <button
+                            key={value}
+                            type="button"
+                            onClick={() => setDraft(eventId, { rating: value })}
+                            disabled={!canRate}
+                            className="rounded-md p-1 transition disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            <Star
+                              className={`size-5 ${
+                                value <= draft.rating
+                                  ? "fill-amber-400 text-amber-500"
+                                  : "text-slate-300"
+                              }`}
+                            />
+                          </button>
+                        ))}
+                      </div>
+
+                      <textarea
+                        value={draft.reviewText}
+                        onChange={(e) => setDraft(eventId, { reviewText: e.target.value })}
+                        disabled={!canRate}
+                        placeholder={
+                          canRate
+                            ? "Dodaj krótką opinię, która będzie publicznie widoczna."
+                            : hasPurchasedTicket
+                              ? "Okno oceniania minęło. Ocenę można dodać tylko do 24h po zakończeniu wydarzenia."
+                              : "Aby ocenić wydarzenie, musisz mieć kupiony bilet."
+                        }
+                        className="min-h-24 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                      />
+
+                      {myRating && (
+                        <p className="text-xs text-slate-500">
+                          Twoja ostatnia ocena: {myRating.rating}/5
+                          {myRating.reviewText ? " z opinią" : ""}
+                        </p>
+                      )}
+
+                      <Button
+                        type="button"
+                        onClick={() => handleSaveRating(event)}
+                        disabled={!canRate || savingRatingFor === eventId}
+                      >
+                        {savingRatingFor === eventId ? "Zapisywanie..." : myRating ? "Zaktualizuj ocenę" : "Dodaj ocenę"}
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>

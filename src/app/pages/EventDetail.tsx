@@ -4,7 +4,7 @@ import { useCart } from "../context/CartContext";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
-import { Calendar, MapPin, Clock, Minus, Plus, ArrowLeft, Check } from "lucide-react";
+import { Calendar, MapPin, Clock, Minus, Plus, ArrowLeft, Check, Star } from "lucide-react";
 import { toast } from "sonner";
 
 type ApiTicketType = {
@@ -53,6 +53,15 @@ type EventDetailData = {
   ticketTypes: EventTicket[];
 };
 
+type EventReview = {
+  id: number;
+  eventId: number;
+  rating: number;
+  reviewText: string;
+  createdAt: string;
+  username: string;
+};
+
 const fallbackImage =
   "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?auto=format&fit=crop&w=1600&q=80";
 
@@ -64,6 +73,9 @@ export function EventDetail() {
   const [event, setEvent] = useState<EventDetailData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [reviews, setReviews] = useState<EventReview[]>([]);
+  const [averageRating, setAverageRating] = useState<number | null>(null);
+  const [ratingsCount, setRatingsCount] = useState(0);
 
   useEffect(() => {
     let mounted = true;
@@ -119,6 +131,23 @@ export function EventDetail() {
 
         if (mounted) {
           setEvent(mappedEvent);
+        }
+
+        const ratingsResponse = await fetch(`/api/event-ratings?eventId=${id}`);
+        if (ratingsResponse.ok) {
+          const ratingsData = await ratingsResponse.json().catch(() => ({}));
+          if (mounted) {
+            const summary = Array.isArray(ratingsData?.summaries)
+              ? ratingsData.summaries.find((item: any) => Number(item.eventId) === Number(id))
+              : null;
+            setAverageRating(
+              summary && Number.isFinite(Number(summary.averageRating))
+                ? Number(summary.averageRating)
+                : null
+            );
+            setRatingsCount(summary ? Number(summary.ratingsCount ?? 0) : 0);
+            setReviews(Array.isArray(ratingsData?.reviews) ? ratingsData.reviews : []);
+          }
         }
       } catch (err) {
         if (mounted) {
@@ -313,6 +342,60 @@ export function EventDetail() {
                   Dodane przez {event.creatorUsername} dnia {createdLabel}
                 </p>
                 <p className="text-gray-700 leading-relaxed">{event.description}</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Opinie uczestników</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900">
+                  <div className="flex items-center gap-2">
+                    <Star className="size-5 fill-amber-400 text-amber-500" />
+                    <span className="font-medium">
+                      {ratingsCount > 0 && averageRating !== null
+                        ? `Średnia ocena: ${averageRating.toFixed(2)} / 5`
+                        : "To wydarzenie nie ma jeszcze ocen."}
+                    </span>
+                  </div>
+                  {ratingsCount > 0 && (
+                    <p className="mt-1 text-sm text-amber-800">Liczba ocen: {ratingsCount}</p>
+                  )}
+                </div>
+
+                {reviews.length === 0 && (
+                  <p className="text-sm text-gray-500">Nie dodano jeszcze publicznych opinii.</p>
+                )}
+
+                {reviews.map((review) => (
+                  <div key={review.id} className="rounded-lg border border-slate-200 bg-white/90 p-4">
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <div>
+                        <p className="font-medium text-slate-900">{review.username}</p>
+                        <p className="text-xs text-slate-500">
+                          {new Date(review.createdAt).toLocaleString("pl-PL", {
+                            dateStyle: "medium",
+                            timeStyle: "short",
+                          })}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: 5 }).map((_, index) => (
+                          <Star
+                            key={index}
+                            className={`size-4 ${
+                              index < review.rating
+                                ? "fill-amber-400 text-amber-500"
+                                : "text-slate-300"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    <p className="text-sm leading-relaxed text-slate-700">{review.reviewText}</p>
+                  </div>
+                ))}
               </CardContent>
             </Card>
           </div>
