@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 export function EmailChangeSuccess() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-100/80 px-4">
-      <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white/90 p-8 text-center shadow-md backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white/95 p-8 text-center shadow-md backdrop-blur-sm">
         <h1 className="text-2xl font-semibold">E-mail został zmieniony</h1>
         <p className="mt-3 text-gray-600">
           Twój adres e-mail został pomyślnie potwierdzony i zaktualizowany.

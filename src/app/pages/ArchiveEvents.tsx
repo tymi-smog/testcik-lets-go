@@ -263,7 +263,7 @@ export function ArchiveEvents() {
       </div>
 
       <div className="container mx-auto px-4 py-8">
-        <div className="mb-8 rounded-xl border border-slate-200 bg-white/88 p-4 shadow-sm backdrop-blur-sm">
+        <div className="mb-8 rounded-xl border border-slate-200 bg-white/90 p-4 shadow-sm backdrop-blur-sm">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
             <select
               value={sortBy}

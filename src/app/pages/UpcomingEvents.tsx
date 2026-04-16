@@ -213,7 +213,7 @@ export function UpcomingEvents() {
 
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           {events.map((event) => (
-            <Card key={event.id} className="overflow-hidden border-slate-200 bg-white/88 shadow-sm backdrop-blur-sm">
+            <Card key={event.id} className="overflow-hidden border-slate-200 bg-white/90 shadow-sm backdrop-blur-sm">
               <img src={event.image} alt={event.title} className="h-48 w-full object-cover" />
               <CardContent className="pt-6">
                 <div className="flex items-start justify-between gap-3 mb-3">
