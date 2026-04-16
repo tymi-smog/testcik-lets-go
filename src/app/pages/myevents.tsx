@@ -471,14 +471,24 @@ export function MyEvents() {
         </p>
       </section>
 
-      <section ref={formSectionRef} className="border rounded-lg p-6 bg-white">
+      <section
+        ref={formSectionRef}
+        className="rounded-2xl border border-slate-200 bg-gradient-to-b from-white to-slate-50/90 p-6 shadow-sm"
+      >
         <div className="mb-4 flex items-center justify-between gap-3">
-          <h2 className="text-lg font-medium">{editingEventId ? "Edycja wydarzenia" : "Nowe wydarzenie"}</h2>
+          <div>
+            <h2 className="text-lg font-medium text-slate-900">
+              {editingEventId ? "Edycja wydarzenia" : "Nowe wydarzenie"}
+            </h2>
+            <p className="text-sm text-slate-600">
+              Uzupełnij pola poniżej. Najważniejsze ustawienia wydarzenia są na górze formularza.
+            </p>
+          </div>
           {editingEventId && (
             <button
               type="button"
               onClick={clearForm}
-              className="rounded-md border px-3 py-1.5 text-sm hover:bg-gray-100"
+              className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100"
             >
               Anuluj edycję
             </button>
@@ -492,7 +502,7 @@ export function MyEvents() {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Tytuł wydarzenia"
-            className="w-full border rounded-md p-2"
+            className="w-full rounded-xl border border-slate-300 bg-white p-3 text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
             required
           />
 
@@ -500,7 +510,7 @@ export function MyEvents() {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Opis wydarzenia"
-            className="w-full border rounded-md p-2 min-h-28"
+            className="min-h-28 w-full rounded-xl border border-slate-300 bg-white p-3 text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
             required
           />
 
@@ -509,7 +519,7 @@ export function MyEvents() {
             value={venue}
             onChange={(e) => setVenue(e.target.value)}
             placeholder="Lokalizacja (np. AmberExpo)"
-            className="w-full border rounded-md p-2"
+            className="w-full rounded-xl border border-slate-300 bg-white p-3 text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
             required
           />
 
@@ -518,7 +528,7 @@ export function MyEvents() {
             value={city}
             onChange={(e) => setCity(e.target.value)}
             placeholder="Miasto"
-            className="w-full border rounded-md p-2"
+            className="w-full rounded-xl border border-slate-300 bg-white p-3 text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
             required
           />
 
@@ -526,7 +536,7 @@ export function MyEvents() {
             type="datetime-local"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="w-full border rounded-md p-2"
+            className="w-full rounded-xl border border-slate-300 bg-white p-3 text-slate-900 shadow-sm focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
             required
           />
 
@@ -535,41 +545,44 @@ export function MyEvents() {
             value={imageUrl}
             onChange={(e) => setImageUrl(e.target.value)}
             placeholder="Link do obrazka (np. Imgur)"
-            className="w-full border rounded-md p-2"
+            className="w-full rounded-xl border border-slate-300 bg-white p-3 text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
           />
 
-          <label className="flex items-start gap-3 rounded-md border p-4">
+          <label className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
             <Checkbox
               checked={allowTicketReturns}
               onCheckedChange={(checked) => setAllowTicketReturns(checked === true)}
               className="mt-1"
             />
-            <span className="text-sm text-gray-700">
+            <span className="text-sm text-slate-700">
               Umożliw zwrot biletów do 7 dni przed datą wydarzenia.
             </span>
           </label>
 
-          <div className="space-y-3 rounded-md border p-4">
+          <div className="space-y-3 rounded-xl border border-slate-200 bg-white/90 p-4 shadow-sm">
             <div className="flex items-center justify-between">
-              <h3 className="font-medium">Typy biletów</h3>
+              <div>
+                <h3 className="font-medium text-slate-900">Typy biletów</h3>
+                <p className="text-sm text-slate-600">Oddziel poszczególne pule biletów i nadaj im własne ceny.</p>
+              </div>
               <button
                 type="button"
                 onClick={addTicketRow}
-                className="rounded-md border px-3 py-1 text-sm hover:bg-gray-100"
+                className="rounded-md border border-slate-300 bg-slate-50 px-3 py-1 text-sm text-slate-700 hover:bg-slate-100"
               >
                 Dodaj typ
               </button>
             </div>
 
             {ticketTypes.map((ticket, index) => (
-              <div key={index} className="rounded-md border p-3 space-y-2">
+              <div key={index} className="space-y-2 rounded-xl border border-slate-200 bg-slate-50/80 p-4">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium">Bilet {index + 1}</p>
+                  <p className="text-sm font-medium text-slate-800">Bilet {index + 1}</p>
                   <button
                     type="button"
                     onClick={() => removeTicketRow(index)}
                     disabled={ticketTypes.length === 1}
-                    className="rounded-md border px-2 py-1 text-xs hover:bg-gray-100 disabled:opacity-50"
+                    className="rounded-md border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700 hover:bg-slate-100 disabled:opacity-50"
                   >
                     Usuń
                   </button>
@@ -580,7 +593,7 @@ export function MyEvents() {
                   value={ticket.name}
                   onChange={(e) => updateTicketRow(index, "name", e.target.value)}
                   placeholder="Nazwa biletu"
-                  className="w-full border rounded-md p-2"
+                  className="w-full rounded-lg border border-slate-300 bg-white p-3 text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
                   required
                 />
 
@@ -592,7 +605,7 @@ export function MyEvents() {
                     value={ticket.price}
                     onChange={(e) => updateTicketRow(index, "price", e.target.value)}
                     placeholder="Cena"
-                    className="w-full border rounded-md p-2"
+                    className="w-full rounded-lg border border-slate-300 bg-white p-3 text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
                     required
                   />
                   <input
@@ -602,7 +615,7 @@ export function MyEvents() {
                     value={ticket.available}
                     onChange={(e) => updateTicketRow(index, "available", e.target.value)}
                     placeholder="Ilość"
-                    className="w-full border rounded-md p-2"
+                    className="w-full rounded-lg border border-slate-300 bg-white p-3 text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
                     required
                   />
                 </div>
@@ -611,7 +624,7 @@ export function MyEvents() {
                   value={ticket.description}
                   onChange={(e) => updateTicketRow(index, "description", e.target.value)}
                   placeholder="Opis biletu"
-                  className="w-full border rounded-md p-2 min-h-20"
+                  className="min-h-20 w-full rounded-lg border border-slate-300 bg-white p-3 text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
                 />
               </div>
             ))}
@@ -620,7 +633,7 @@ export function MyEvents() {
           <button
             type="submit"
             disabled={!canSubmit || submitting}
-            className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 disabled:opacity-50"
+            className="rounded-xl bg-slate-900 px-5 py-3 text-white shadow-sm transition hover:bg-slate-800 disabled:opacity-50"
           >
             {submitting ? "Zapisywanie..." : editingEventId ? "Zapisz zmiany" : "Dodaj wydarzenie"}
           </button>
