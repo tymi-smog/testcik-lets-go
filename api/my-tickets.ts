@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { sql } from "../lib/db.js";
 import { authenticateRequest } from "../lib/auth.js";
+import { ensureEventSalesColumns } from "../lib/event-sales.js";
 import { ensureTicketPurchasesTable } from "../lib/ticket-purchases.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -14,21 +15,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
+    await ensureEventSalesColumns();
     await ensureTicketPurchasesTable();
 
     const rows = await sql`
       SELECT
-        id,
-        event_id,
-        event_title,
-        ticket_type_id,
-        ticket_type_name,
-        quantity,
-        unit_price,
-        line_total,
-        purchased_at
-      FROM ticket_purchases
-      WHERE user_id = ${authUser.userId}
+        tp.id,
+        tp.event_id,
+        tp.event_title,
+        tp.ticket_type_id,
+        tp.ticket_type_name,
+        tp.quantity,
+        tp.unit_price,
+        tp.line_total,
+        tp.purchased_at,
+        e.date AS event_date,
+        COALESCE(e.allow_ticket_returns, false) AS allow_ticket_returns
+      FROM ticket_purchases tp
+      LEFT JOIN events e ON e.id = tp.event_id
+      WHERE tp.user_id = ${authUser.userId}
+        AND tp.refunded_at IS NULL
       ORDER BY purchased_at DESC, id DESC
     `;
 
@@ -42,6 +48,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       unitPrice: Number(row.unit_price),
       lineTotal: Number(row.line_total),
       purchasedAt: row.purchased_at,
+      eventDate: row.event_date ?? null,
+      allowTicketReturns: Boolean(row.allow_ticket_returns),
     }));
 
     return res.status(200).json({ items });

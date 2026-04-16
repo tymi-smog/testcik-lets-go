@@ -1,6 +1,7 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { useAuth } from "../../context/AuthContext";
+import { Checkbox } from "../components/ui/checkbox";
 
 type MyEvent = {
   id: string | number;
@@ -17,6 +18,7 @@ type MyEvent = {
   image_url?: string | null;
   image?: string | null;
   sold_tickets?: number | string | null;
+  allow_ticket_returns?: boolean | null;
   ticketTypes?: Array<{
     id?: string | number;
     name: string;
@@ -92,6 +94,7 @@ export function MyEvents() {
   const [venue, setVenue] = useState("");
   const [date, setDate] = useState("");
   const [imageUrl, setImageUrl] = useState("");
+  const [allowTicketReturns, setAllowTicketReturns] = useState(false);
   const [ticketTypes, setTicketTypes] = useState<TicketDraft[]>([
     { name: "", price: "", available: "", description: "" },
   ]);
@@ -328,6 +331,7 @@ export function MyEvents() {
     }
 
     setImageUrl(event.image_url || "");
+    setAllowTicketReturns(event.allow_ticket_returns === true);
 
     const mappedTickets =
       event.ticketTypes?.map((ticket) => ({
@@ -348,6 +352,7 @@ export function MyEvents() {
     setVenue("");
     setDate("");
     setImageUrl("");
+    setAllowTicketReturns(false);
     setTicketTypes([{ name: "", price: "", available: "", description: "" }]);
   }
 
@@ -378,6 +383,7 @@ export function MyEvents() {
           venue,
           date,
           imageUrl,
+          allowTicketReturns,
           ticketTypes: ticketTypes.map((ticket) => ({
             name: ticket.name.trim(),
             price: Number(ticket.price),
@@ -513,6 +519,17 @@ export function MyEvents() {
             placeholder="Link do obrazka (np. Imgur)"
             className="w-full border rounded-md p-2"
           />
+
+          <label className="flex items-start gap-3 rounded-md border p-4">
+            <Checkbox
+              checked={allowTicketReturns}
+              onCheckedChange={(checked) => setAllowTicketReturns(checked === true)}
+              className="mt-1"
+            />
+            <span className="text-sm text-gray-700">
+              Umożliw zwrot biletów do 7 dni przed datą wydarzenia.
+            </span>
+          </label>
 
           <div className="space-y-3 rounded-md border p-4">
             <div className="flex items-center justify-between">

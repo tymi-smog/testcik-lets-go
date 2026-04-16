@@ -15,6 +15,7 @@ type EventRow = {
   ticket_price?: number | string | null;
   available_tickets?: number | string | null;
   sold_tickets?: number | string | null;
+  allow_ticket_returns?: boolean | null;
   created_at?: string | null;
   image_url?: string | null;
   category?: string | null;
@@ -76,6 +77,7 @@ export default async function handler(req: any, res: any) {
       const hasCity = columnNames.has("city");
       const hasVenue = columnNames.has("venue");
       const hasSoldTickets = columnNames.has("sold_tickets");
+      const hasAllowTicketReturns = columnNames.has("allow_ticket_returns");
 
       let events: EventRow[] = [];
 
@@ -93,6 +95,7 @@ export default async function handler(req: any, res: any) {
               events.ticket_price,
               events.available_tickets,
               events.sold_tickets,
+              events.allow_ticket_returns,
               events.created_at,
               events.image AS image_url,
               categories.name AS category
@@ -113,6 +116,7 @@ export default async function handler(req: any, res: any) {
               events.ticket_price,
               events.available_tickets,
               events.sold_tickets,
+              events.allow_ticket_returns,
               events.created_at,
               events.image AS image_url,
               categories.name AS category
@@ -135,6 +139,7 @@ export default async function handler(req: any, res: any) {
               events.ticket_price,
               events.available_tickets,
               events.sold_tickets,
+              events.allow_ticket_returns,
               events.created_at,
               events.image_url AS image_url,
               categories.name AS category
@@ -155,6 +160,7 @@ export default async function handler(req: any, res: any) {
               events.ticket_price,
               events.available_tickets,
               events.sold_tickets,
+              events.allow_ticket_returns,
               events.created_at,
               events.image_url AS image_url,
               categories.name AS category
@@ -177,6 +183,7 @@ export default async function handler(req: any, res: any) {
               events.ticket_price,
               events.available_tickets,
               events.sold_tickets,
+              events.allow_ticket_returns,
               events.created_at,
               NULL::text AS image_url,
               categories.name AS category
@@ -197,6 +204,7 @@ export default async function handler(req: any, res: any) {
               events.ticket_price,
               events.available_tickets,
               events.sold_tickets,
+              events.allow_ticket_returns,
               events.created_at,
               NULL::text AS image_url,
               categories.name AS category
@@ -354,6 +362,7 @@ export default async function handler(req: any, res: any) {
           image_url: event.image_url || null,
           image: event.image_url || `https://picsum.photos/seed/event-${event.id}/1200/675`,
           sold_tickets: hasSoldTickets ? Number(event.sold_tickets ?? 0) : 0,
+          allow_ticket_returns: hasAllowTicketReturns ? Boolean(event.allow_ticket_returns) : false,
           ticketTypes: eventTicketTypes,
         };
       });
@@ -389,6 +398,7 @@ export default async function handler(req: any, res: any) {
       const location = city && venue ? `${venue}, ${city}` : venue;
       const date = String(body?.date ?? "").trim();
       const imageUrl = String(body?.imageUrl ?? "").trim();
+      const allowTicketReturns = body?.allowTicketReturns === true;
       const rawTicketTypes = Array.isArray(body?.ticketTypes) ? body.ticketTypes : [];
       const ticketTypes: TicketInput[] = rawTicketTypes.map((ticket: any) => ({
         name: String(ticket?.name ?? "").trim(),
@@ -476,6 +486,7 @@ export default async function handler(req: any, res: any) {
               ticket_price,
               available_tickets,
               sold_tickets,
+              allow_ticket_returns,
               image
             )
             VALUES (
@@ -488,6 +499,7 @@ export default async function handler(req: any, res: any) {
               ${ticketPrice},
               ${availableTickets},
               0,
+              ${allowTicketReturns},
               ${imageUrl || null}
             )
             RETURNING id
@@ -503,6 +515,7 @@ export default async function handler(req: any, res: any) {
               ticket_price,
               available_tickets,
               sold_tickets,
+              allow_ticket_returns,
               image
             )
             VALUES (
@@ -514,6 +527,7 @@ export default async function handler(req: any, res: any) {
               ${ticketPrice},
               ${availableTickets},
               0,
+              ${allowTicketReturns},
               ${imageUrl || null}
             )
             RETURNING id
@@ -532,6 +546,7 @@ export default async function handler(req: any, res: any) {
               ticket_price,
               available_tickets,
               sold_tickets,
+              allow_ticket_returns,
               image_url
             )
             VALUES (
@@ -544,6 +559,7 @@ export default async function handler(req: any, res: any) {
               ${ticketPrice},
               ${availableTickets},
               0,
+              ${allowTicketReturns},
               ${imageUrl || null}
             )
             RETURNING id
@@ -559,6 +575,7 @@ export default async function handler(req: any, res: any) {
               ticket_price,
               available_tickets,
               sold_tickets,
+              allow_ticket_returns,
               image_url
             )
             VALUES (
@@ -570,6 +587,7 @@ export default async function handler(req: any, res: any) {
               ${ticketPrice},
               ${availableTickets},
               0,
+              ${allowTicketReturns},
               ${imageUrl || null}
             )
             RETURNING id
@@ -587,7 +605,8 @@ export default async function handler(req: any, res: any) {
               date,
               ticket_price,
               available_tickets,
-              sold_tickets
+              sold_tickets,
+              allow_ticket_returns
             )
             VALUES (
               ${authUser.userId},
@@ -598,7 +617,8 @@ export default async function handler(req: any, res: any) {
               ${parsedDate.toISOString()},
               ${ticketPrice},
               ${availableTickets},
-              0
+              0,
+              ${allowTicketReturns}
             )
             RETURNING id
           `;
@@ -612,7 +632,8 @@ export default async function handler(req: any, res: any) {
               date,
               ticket_price,
               available_tickets,
-              sold_tickets
+              sold_tickets,
+              allow_ticket_returns
             )
             VALUES (
               ${authUser.userId},
@@ -622,7 +643,8 @@ export default async function handler(req: any, res: any) {
               ${parsedDate.toISOString()},
               ${ticketPrice},
               ${availableTickets},
-              0
+              0,
+              ${allowTicketReturns}
             )
             RETURNING id
           `;
@@ -733,6 +755,7 @@ export default async function handler(req: any, res: any) {
       const location = city && venue ? `${venue}, ${city}` : venue;
       const date = String(body?.date ?? "").trim();
       const imageUrl = String(body?.imageUrl ?? "").trim();
+      const allowTicketReturns = body?.allowTicketReturns === true;
       const rawTicketTypes = Array.isArray(body?.ticketTypes) ? body.ticketTypes : [];
       const ticketTypes: TicketInput[] = rawTicketTypes.map((ticket: any) => ({
         name: String(ticket?.name ?? "").trim(),
@@ -807,6 +830,7 @@ export default async function handler(req: any, res: any) {
               date = ${parsedDate.toISOString()},
               ticket_price = ${ticketPrice},
               available_tickets = ${availableTickets},
+              allow_ticket_returns = ${allowTicketReturns},
               image = ${imageUrl || null}
             WHERE id = ${idFromQuery}
           `;
@@ -819,6 +843,7 @@ export default async function handler(req: any, res: any) {
               date = ${parsedDate.toISOString()},
               ticket_price = ${ticketPrice},
               available_tickets = ${availableTickets},
+              allow_ticket_returns = ${allowTicketReturns},
               image = ${imageUrl || null}
             WHERE id = ${idFromQuery}
           `;
@@ -834,6 +859,7 @@ export default async function handler(req: any, res: any) {
               date = ${parsedDate.toISOString()},
               ticket_price = ${ticketPrice},
               available_tickets = ${availableTickets},
+              allow_ticket_returns = ${allowTicketReturns},
               image_url = ${imageUrl || null}
             WHERE id = ${idFromQuery}
           `;
@@ -846,6 +872,7 @@ export default async function handler(req: any, res: any) {
               date = ${parsedDate.toISOString()},
               ticket_price = ${ticketPrice},
               available_tickets = ${availableTickets},
+              allow_ticket_returns = ${allowTicketReturns},
               image_url = ${imageUrl || null}
             WHERE id = ${idFromQuery}
           `;
@@ -860,7 +887,8 @@ export default async function handler(req: any, res: any) {
               location = ${location},
               date = ${parsedDate.toISOString()},
               ticket_price = ${ticketPrice},
-              available_tickets = ${availableTickets}
+              available_tickets = ${availableTickets},
+              allow_ticket_returns = ${allowTicketReturns}
             WHERE id = ${idFromQuery}
           `;
         } else {
@@ -871,7 +899,8 @@ export default async function handler(req: any, res: any) {
               description = ${description},
               date = ${parsedDate.toISOString()},
               ticket_price = ${ticketPrice},
-              available_tickets = ${availableTickets}
+              available_tickets = ${availableTickets},
+              allow_ticket_returns = ${allowTicketReturns}
             WHERE id = ${idFromQuery}
           `;
         }
