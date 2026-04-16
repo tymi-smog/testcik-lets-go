@@ -72,6 +72,9 @@ export function Header() {
                     <Link to="/profile">Szczegóły</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
+                    <Link to="/upcoming-events">Nadchodzące wydarzenia</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
                     <Link to="/my-events">Moje wydarzenia</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>

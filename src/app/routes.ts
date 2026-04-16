@@ -12,6 +12,7 @@ import { Register } from "./pages/register";
 import { Profile } from "./pages/profile";
 import { MyEvents } from "./pages/myevents";
 import { MyTickets } from "./pages/mytickets";
+import { UpcomingEvents } from "./pages/UpcomingEvents";
 
 import { VerifyEmail } from "./pages/VerifyEmail";
 import { ForgotPassword } from "./pages/ForgotPassword";
@@ -35,6 +36,7 @@ export const router = createBrowserRouter([
       { path: "profile", Component: Profile },
       { path: "my-events", Component: MyEvents },
       { path: "my-tickets", Component: MyTickets },
+      { path: "upcoming-events", Component: UpcomingEvents },
 
       { path: "verify-email", Component: VerifyEmail },
 
