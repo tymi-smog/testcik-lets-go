@@ -3,6 +3,7 @@ import { sql } from "../lib/db.js";
 import { authenticateRequest } from "../lib/auth.js";
 import { ensureEventSalesColumns } from "../lib/event-sales.js";
 import { ensureTicketPurchasesTable } from "../lib/ticket-purchases.js";
+import { resend } from "../lib/resend.js";
 
 const REFUND_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -34,7 +35,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         tp.user_id,
         tp.event_id,
         tp.ticket_type_id,
+        tp.event_title,
+        tp.ticket_type_name,
         tp.quantity,
+        tp.unit_price,
+        tp.line_total,
         tp.refunded_at,
         e.date AS event_date,
         COALESCE(e.allow_ticket_returns, false) AS allow_ticket_returns
@@ -114,6 +119,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     `;
 
     await sql`COMMIT`;
+
+    try {
+      if (authUser.email) {
+        await resend.emails.send({
+          from: "register@panbilecik.eu",
+          to: authUser.email,
+          subject: "Potwierdzenie zwrotu biletów",
+          html: `
+            <h2>Zwrot został przyjęty</h2>
+            <p>Potwierdzamy zwrot biletu na wydarzenie <strong>${purchase.event_title}</strong>.</p>
+            <ul>
+              <li>Typ biletu: ${purchase.ticket_type_name}</li>
+              <li>Ilość: ${Number(purchase.quantity)}</li>
+              <li>Cena za sztukę: ${Number(purchase.unit_price).toFixed(2)} zł</li>
+              <li>Kwota zwrotu: ${Number(purchase.line_total).toFixed(2)} zł</li>
+              <li>Data wydarzenia: ${new Date(String(purchase.event_date)).toLocaleString("pl-PL", {
+                dateStyle: "medium",
+                timeStyle: "short",
+              })}</li>
+            </ul>
+            <p>Środki zostaną obsłużone zgodnie z zasadami organizatora i operatora płatności.</p>
+          `,
+        });
+      }
+    } catch (emailError) {
+      console.warn("REFUND EMAIL ERROR:", emailError);
+    }
+
     return res.status(200).json({ success: true });
   } catch (error) {
     try {

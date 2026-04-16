@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
+import { toast } from "sonner";
 
 type TicketPurchase = {
   id: number;
@@ -107,8 +108,11 @@ export function MyTickets() {
       }
 
       await loadTickets(token);
+      toast.success("Zwrot biletow zostal przyjety. Wyslalismy potwierdzenie e-mail.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Wystapil nieznany blad.");
+      const message = err instanceof Error ? err.message : "Wystapil nieznany blad.";
+      setError(message);
+      toast.error(message);
     } finally {
       setRefundingId(null);
     }

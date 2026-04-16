@@ -1,7 +1,9 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
+import { useRef } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { Checkbox } from "../components/ui/checkbox";
+import { toast } from "sonner";
 
 type MyEvent = {
   id: string | number;
@@ -87,6 +89,8 @@ function getMyEventStats(event: MyEvent) {
 
 export function MyEvents() {
   const { token, user, isLoading } = useAuth();
+  const formSectionRef = useRef<HTMLElement | null>(null);
+  const titleInputRef = useRef<HTMLInputElement | null>(null);
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -342,6 +346,13 @@ export function MyEvents() {
       })) ?? [];
 
     setTicketTypes(mappedTickets.length ? mappedTickets : [{ name: "", price: "", available: "", description: "" }]);
+
+    requestAnimationFrame(() => {
+      formSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      window.setTimeout(() => {
+        titleInputRef.current?.focus();
+      }, 250);
+    });
   }
 
   function clearForm() {
@@ -354,6 +365,11 @@ export function MyEvents() {
     setImageUrl("");
     setAllowTicketReturns(false);
     setTicketTypes([{ name: "", price: "", available: "", description: "" }]);
+
+    requestAnimationFrame(() => {
+      formSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      titleInputRef.current?.focus();
+    });
   }
 
   async function handleCreateEvent(e: React.FormEvent) {
@@ -361,7 +377,7 @@ export function MyEvents() {
 
     const authToken = token ?? localStorage.getItem("token");
     if (!authToken) {
-      alert("Musisz być zalogowany, aby dodawać wydarzenia.");
+      toast.error("Musisz być zalogowany, aby dodawać wydarzenia.");
       return;
     }
 
@@ -395,16 +411,17 @@ export function MyEvents() {
 
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        alert(data?.error ?? "Nie udało się utworzyć wydarzenia.");
+        toast.error(data?.error ?? "Nie udało się zapisać wydarzenia.");
         return;
       }
 
+      const wasEditing = Boolean(editingEventId);
       clearForm();
       await loadMyEvents(user?.userId);
-      alert(editingEventId ? "Wydarzenie zostało zaktualizowane." : "Wydarzenie zostało dodane.");
+      toast.success(wasEditing ? "Wydarzenie zostało zaktualizowane." : "Wydarzenie zostało dodane.");
     } catch (error) {
       console.error(error);
-      alert("Wystąpił błąd podczas zapisu wydarzenia.");
+      toast.error("Wystąpił błąd podczas zapisu wydarzenia.");
     } finally {
       setSubmitting(false);
     }
@@ -454,7 +471,7 @@ export function MyEvents() {
         </p>
       </section>
 
-      <section className="border rounded-lg p-6 bg-white">
+      <section ref={formSectionRef} className="border rounded-lg p-6 bg-white">
         <div className="mb-4 flex items-center justify-between gap-3">
           <h2 className="text-lg font-medium">{editingEventId ? "Edycja wydarzenia" : "Nowe wydarzenie"}</h2>
           {editingEventId && (
@@ -470,6 +487,7 @@ export function MyEvents() {
 
         <form onSubmit={handleCreateEvent} className="space-y-4">
           <input
+            ref={titleInputRef}
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
