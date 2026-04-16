@@ -38,9 +38,6 @@ export function Header() {
           <Link to="/events-archive" className="hover:text-blue-600 transition-colors">
             Archiwum wydarzeń
           </Link>
-          <Link to="/checkout" className="hover:text-blue-600 transition-colors">
-            Płatność
-          </Link>
         </nav>
 
         <div className="flex items-center gap-3">
