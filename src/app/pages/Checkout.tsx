@@ -98,7 +98,7 @@ export function Checkout() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-100/80 flex items-center justify-center">
         <p className="text-gray-600">Ładowanie sesji...</p>
       </div>
     );
@@ -106,7 +106,7 @@ export function Checkout() {
 
   if (!user || !user.is_verified) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-100/80 flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl mb-2">Zakup niedostępny</h2>
           <p className="text-gray-600 mb-6">
@@ -122,7 +122,7 @@ export function Checkout() {
 
   if (items.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-100/80 flex items-center justify-center">
         <div className="text-center">
           <ShoppingCart className="size-16 mx-auto text-gray-400 mb-4" />
           <h2 className="text-2xl mb-2">Twój koszyk jest pusty</h2>
@@ -134,7 +134,7 @@ export function Checkout() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-slate-100/80 py-8">
       <div className="container mx-auto px-4">
         <h1 className="text-4xl mb-8">Koszyk</h1>
 

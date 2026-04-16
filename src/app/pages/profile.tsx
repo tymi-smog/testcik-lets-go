@@ -128,7 +128,7 @@ export function Profile() {
       </div>
 
       <div className="grid grid-cols-1 gap-6">
-        <section className="rounded-xl border bg-white p-6 shadow-sm space-y-4">
+        <section className="space-y-4 rounded-xl border border-slate-200 bg-white/90 p-6 shadow-sm backdrop-blur-sm">
           <div>
             <h2 className="text-lg font-semibold text-gray-900">Nazwa użytkownika</h2>
             <p className="text-sm text-gray-500">Ta nazwa jest widoczna przy Twoich wydarzeniach.</p>
@@ -141,7 +141,7 @@ export function Profile() {
             id="username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+            className="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-gray-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
           />
 
           <button
@@ -153,7 +153,7 @@ export function Profile() {
           </button>
         </section>
 
-        <section className="rounded-xl border bg-white p-6 shadow-sm space-y-4">
+        <section className="space-y-4 rounded-xl border border-slate-200 bg-white/90 p-6 shadow-sm backdrop-blur-sm">
           <div>
             <h2 className="text-lg font-semibold text-gray-900">Adres e-mail</h2>
             <p className="text-sm text-gray-500">Po zmianie wyślemy wiadomość z potwierdzeniem.</p>
@@ -167,7 +167,7 @@ export function Profile() {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+            className="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-gray-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
           />
 
           {user?.pending_email && (
@@ -185,7 +185,7 @@ export function Profile() {
           </button>
         </section>
 
-        <section className="rounded-xl border bg-white p-6 shadow-sm">
+        <section className="rounded-xl border border-slate-200 bg-white/90 p-6 shadow-sm backdrop-blur-sm">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-lg font-semibold text-gray-900">Bezpieczeństwo</h2>

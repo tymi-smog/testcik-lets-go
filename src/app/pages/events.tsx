@@ -285,7 +285,7 @@ export function Events() {
   ]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-100/80">
       <div className="bg-[#041f14] text-white py-16">
         <div className="container mx-auto px-4">
           <h1 className="text-5xl mb-4">Wszystkie nadchodzące wydarzenia</h1>
@@ -294,7 +294,7 @@ export function Events() {
       </div>
 
       <div className="container mx-auto px-4 py-8">
-        <div className="mb-8 rounded-lg border bg-white p-4">
+        <div className="mb-8 rounded-xl border border-slate-200 bg-white/88 p-4 shadow-sm backdrop-blur-sm">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
             <select
               value={sortBy}

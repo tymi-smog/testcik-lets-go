@@ -160,7 +160,7 @@ export function UpcomingEvents() {
 
   if (isLoading || loadingEvents) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-100/80 flex items-center justify-center">
         <p className="text-gray-600">Ładowanie nadchodzących wydarzeń...</p>
       </div>
     );
@@ -171,7 +171,7 @@ export function UpcomingEvents() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-slate-100/80 py-8">
       <div className="container mx-auto px-4 max-w-6xl">
         <div className="flex flex-col gap-3 mb-6 md:flex-row md:items-end md:justify-between">
           <div>
@@ -213,7 +213,7 @@ export function UpcomingEvents() {
 
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           {events.map((event) => (
-            <Card key={event.id} className="overflow-hidden bg-white">
+            <Card key={event.id} className="overflow-hidden border-slate-200 bg-white/88 shadow-sm backdrop-blur-sm">
               <img src={event.image} alt={event.title} className="h-48 w-full object-cover" />
               <CardContent className="pt-6">
                 <div className="flex items-start justify-between gap-3 mb-3">

@@ -642,7 +642,7 @@ export function MyEvents() {
 
       <section className="space-y-4">
         <h2 className="text-lg font-medium">Twoje dodane wydarzenia</h2>
-        <div className="rounded-lg border bg-white p-4">
+        <div className="rounded-xl border border-slate-200 bg-white/88 p-4 shadow-sm backdrop-blur-sm">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
             <select
               value={sortBy}
@@ -779,7 +779,10 @@ export function MyEvents() {
                   });
 
               return (
-                <article key={String(event.id)} className="border rounded-lg overflow-hidden bg-white">
+                <article
+                  key={String(event.id)}
+                  className="overflow-hidden rounded-xl border border-slate-200 bg-white/88 shadow-sm backdrop-blur-sm"
+                >
                   <img
                     src={event.image_url || event.image || fallbackImage}
                     alt={event.title}

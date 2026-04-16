@@ -136,7 +136,7 @@ export function Home() {
   }, [events]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-100/80">
       <div className="bg-[#041f14] text-white py-16">
         <div className="container mx-auto px-4">
           <h1 className="text-5xl mb-4">Ostatnio dodane wydarzenia</h1>

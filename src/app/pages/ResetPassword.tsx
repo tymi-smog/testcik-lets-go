@@ -31,7 +31,7 @@ export function ResetPassword() {
     <div className="min-h-screen flex items-center justify-center">
       <form
         onSubmit={handleSubmit}
-        className="bg-white p-6 rounded-xl shadow-md w-full max-w-md space-y-4"
+        className="w-full max-w-md space-y-4 rounded-xl border border-slate-200 bg-white/90 p-6 shadow-md backdrop-blur-sm"
       >
         <h1 className="text-xl font-semibold text-center">
           Ustaw nowe hasło

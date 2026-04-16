@@ -50,10 +50,10 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="min-h-screen flex items-center justify-center bg-slate-100/80">
       <form
         onSubmit={handleLogin}
-        className="bg-white p-8 rounded-xl shadow-md w-full max-w-md space-y-4"
+        className="w-full max-w-md space-y-4 rounded-xl border border-slate-200 bg-white/90 p-8 shadow-md backdrop-blur-sm"
       >
         <h1 className="text-2xl font-semibold text-center">Logowanie</h1>
 

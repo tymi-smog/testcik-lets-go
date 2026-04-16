@@ -120,7 +120,7 @@ export function MyTickets() {
 
   if (isLoading || loadingTickets) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-100/80 flex items-center justify-center">
         <p className="text-gray-600">Ladowanie biletow...</p>
       </div>
     );
@@ -131,7 +131,7 @@ export function MyTickets() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-slate-100/80 py-8">
       <div className="container mx-auto px-4 max-w-4xl">
         <h1 className="text-4xl mb-6">Moje bilety</h1>
 

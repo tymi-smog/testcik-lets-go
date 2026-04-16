@@ -24,7 +24,7 @@ export function Header() {
   }
 
   return (
-    <header className="border-b bg-white sticky top-0 z-50">
+    <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/88 backdrop-blur">
       <div className="container mx-auto px-4 py-2 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
           <img src="/ikonasigmy.svg" alt="PanBilecik" className="w-10 h-10" />
