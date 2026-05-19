@@ -83,7 +83,7 @@ export function AdminPanel() {
         setError(null);
 
         const [reportsResponse, eventsResponse] = await Promise.all([
-          fetch("/api/event-reports", {
+          fetch("/api/events?reports=1", {
             headers: {
               Authorization: `Bearer ${token}`,
             },

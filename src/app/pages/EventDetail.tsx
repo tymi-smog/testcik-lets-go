@@ -236,7 +236,7 @@ export function EventDetail() {
 
     try {
       setSubmittingReport(true);
-      const response = await fetch("/api/event-reports", {
+      const response = await fetch("/api/events?report=1", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
