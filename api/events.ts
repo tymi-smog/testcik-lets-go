@@ -6,6 +6,7 @@ import { ensureEventRatingsTable } from "../lib/event-ratings.js";
 import { ensureEventReportsTable } from "../lib/event-reports.js";
 
 const VALID_REPORT_REASONS = new Set(["spam", "scam", "inappropriate", "duplicate", "other"]);
+const VALID_BULK_ACTIONS = new Set(["bulk-delete", "bulk-move-category"]);
 
 type EventRow = {
   id: number | string;
@@ -84,6 +85,14 @@ async function getUsersJoinColumn() {
   return null;
 }
 
+function parseIds(input: unknown) {
+  return Array.isArray(input)
+    ? input
+        .map((item) => Number(item))
+        .filter((value) => Number.isFinite(value) && value > 0)
+    : [];
+}
+
 export default async function handler(req: any, res: any) {
   if (req.method === "GET" && String(req.query?.reports) === "1") {
     try {
@@ -113,7 +122,10 @@ export default async function handler(req: any, res: any) {
                 er.updated_at,
                 e.title AS event_title,
                 e.date AS event_date,
-                e.location AS event_location,
+                CASE
+                  WHEN e.venue IS NOT NULL AND e.city IS NOT NULL THEN e.venue || ', ' || e.city
+                  ELSE COALESCE(e.venue, e.city, NULL::text)
+                END AS event_location,
                 e.city AS event_city,
                 e.venue AS event_venue,
                 e.created_at AS event_created_at,
@@ -136,7 +148,10 @@ export default async function handler(req: any, res: any) {
                   er.updated_at,
                   e.title AS event_title,
                   e.date AS event_date,
-                  e.location AS event_location,
+                  CASE
+                    WHEN e.venue IS NOT NULL AND e.city IS NOT NULL THEN e.venue || ', ' || e.city
+                    ELSE COALESCE(e.venue, e.city, NULL::text)
+                  END AS event_location,
                   e.city AS event_city,
                   e.venue AS event_venue,
                   e.created_at AS event_created_at,
@@ -158,7 +173,10 @@ export default async function handler(req: any, res: any) {
                   er.updated_at,
                   e.title AS event_title,
                   e.date AS event_date,
-                  e.location AS event_location,
+                  CASE
+                    WHEN e.venue IS NOT NULL AND e.city IS NOT NULL THEN e.venue || ', ' || e.city
+                    ELSE COALESCE(e.venue, e.city, NULL::text)
+                  END AS event_location,
                   e.city AS event_city,
                   e.venue AS event_venue,
                   e.created_at AS event_created_at,
@@ -271,6 +289,101 @@ export default async function handler(req: any, res: any) {
     } catch (error: any) {
       console.error("EVENT REPORTS POST ERROR:", error);
       return res.status(500).json({ error: error.message ?? "Report save failed" });
+    }
+  }
+
+  if (req.method === "POST" && VALID_BULK_ACTIONS.has(String(req.query?.action ?? ""))) {
+    try {
+      await ensureEventSalesColumns();
+      await ensureTicketPurchasesTable();
+      await ensureEventRatingsTable();
+      await ensureEventReportsTable();
+
+      const authUser = await authenticateRequest(req);
+      if (!authUser) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      if (!authUser.is_admin) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+
+      const body = parseRequestBody(req.body);
+      const ids = parseIds(body?.ids);
+      if (ids.length === 0) {
+        return res.status(400).json({ error: "Nie wybrano żadnych wydarzeń." });
+      }
+
+      if (String(req.query?.action) === "bulk-delete") {
+        await sql`BEGIN`;
+
+        await sql`
+          DELETE FROM event_reports
+          WHERE event_id = ANY(${ids}::int[])
+        `;
+        await sql`
+          DELETE FROM event_ratings
+          WHERE event_id = ANY(${ids}::int[])
+        `;
+        await sql`
+          DELETE FROM ticket_purchases
+          WHERE event_id = ANY(${ids}::int[])
+        `;
+        await sql`
+          DELETE FROM ticket_types
+          WHERE event_id = ANY(${ids}::int[])
+        `;
+        await sql`
+          DELETE FROM events
+          WHERE id = ANY(${ids}::int[])
+        `;
+
+        await sql`COMMIT`;
+
+        return res.status(200).json({ success: true, deletedIds: ids });
+      }
+
+      const category = String(body?.category ?? "").trim();
+      if (!category) {
+        return res.status(400).json({ error: "Wybierz kategorię docelową." });
+      }
+
+      await sql`BEGIN`;
+
+      const categoryRows = await sql`
+        SELECT id, name
+        FROM categories
+        WHERE LOWER(name) = LOWER(${category})
+        LIMIT 1
+      `;
+      let categoryId = categoryRows[0]?.id ? Number(categoryRows[0].id) : null;
+
+      if (!categoryId) {
+        const created = await sql`
+          INSERT INTO categories (name)
+          VALUES (${category})
+          RETURNING id
+        `;
+        categoryId = Number(created[0].id);
+      }
+
+      await sql`
+        UPDATE events
+        SET category_id = ${categoryId}
+        WHERE id = ANY(${ids}::int[])
+      `;
+
+      await sql`COMMIT`;
+
+      return res.status(200).json({ success: true, movedIds: ids, category });
+    } catch (error: any) {
+      try {
+        await sql`ROLLBACK`;
+      } catch {
+        // ignore rollback errors
+      }
+      console.error("EVENT BULK ACTION ERROR:", error);
+      return res.status(500).json({ error: error.message ?? "Bulk action failed" });
     }
   }
 

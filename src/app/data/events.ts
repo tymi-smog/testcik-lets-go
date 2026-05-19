@@ -22,12 +22,12 @@ export interface TicketType {
 export const events: Event[] = [
   {
     id: '1',
-    title: 'SUN FESIVAL',
+    title: 'SUN FESTIVAL',
     category: 'Festiwal',
     Data: '2026-07-15',
     Godzina: '18:00',
     Miejsce: 'Nadmorski Park Kultury',
-    Lokalizacja: 'Kolobrzeg, Polska',
+    Lokalizacja: 'Kołobrzeg, Polska',
     image: 'https://images.unsplash.com/photo-1760822400484-d7e9e2c6aacc?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmZXN0aXZhbCUyMG91dGRvb3IlMjBldmVudHxlbnwxfHx8fDE3NzEzMTA2MTB8MA&ixlib=rb-4.1.0&q=80&w=1080',
     description: ' SUMMER SOUND FESTIVAL 2026 Wyobraź sobie ciepły letni wieczór, zachód słońca rozświetlający scenę i tysiące ludzi śpiewających razem swoje ulubione piosenki. Summer Sound Festival to coś więcej niż zwykły koncert — to kilka niezapomnianych dni wypełnionych muzyką, emocjami i czystą energią. Na głównej scenie doświadczysz legendarnych występów oraz koncertów największych gwiazd współczesnej muzyki. Poczuj potężne brzmienie Linkin Park, nocny, miejski klimat Taco Hemingwaya, a także niesamowite show artystów takich jak Imagine Dragons, Dawid Podsiadło, Billie Eilish, PRO8L3M, Bring Me The Horizon i wielu innych. Każdy dzień festiwalu łączy rock, rap, alternatywę i elektronikę w jedno epickie przeżycie. Poza koncertami czekają na Ciebie strefa chilloutu, food trucki serwujące smaki z całego świata, silent disco pod gwiazdami oraz spektakularne pokazy świetlne, które zamienią noc w morze kolorów. To miejsce spotkań ludzi, którzy mają tę samą energię i chcą tworzyć wspomnienia na całe lato. Zbierz ekipę, spakuj najlepszy vibe i przygotuj się na weekend brzmiący jak Twoja idealna playlista. Summer Sound Festival — tu zaczyna się Twoje lato.',
     ticketTypes: [
@@ -48,7 +48,7 @@ export const events: Event[] = [
     description: 'SUMMER SOUND FESTIVAL 2026 – ROCK LEGENDS EDITION. Poczuj, jak ziemia drży pod sceną, światła przecinają ciepłe letnie niebo, a tysiące głosów śpiewa największe rockowe hymny wszech czasów. Summer Sound Festival powraca w głośniejszej i cięższej odsłonie — wypełnionej ryczącymi gitarami, potężnymi bębnami i niepowstrzymaną energią od pierwszej do ostatniej minuty. W tym roku line-up opiera się na prawdziwych ikonach rocka i metalu. Linkin Park, Limp Bizkit, Metallica, AC/DC, System Of A Down oraz Bon Jovi przejmą główną scenę, serwując legendarne koncerty i ponadczasowe hity, które ukształtowały całe pokolenia. Od wybuchowego nu-metalu po klasyczny stadionowy rock — każda chwila została zaprojektowana tak, by była epicka. Ale to doświadczenie wykracza daleko poza samą muzykę. Czekają na Ciebie immersyjne pokazy świetlne, ogromna festiwalowa wioska pełna food trucków z całego świata, strefy chilloutu do złapania oddechu między koncertami oraz nocne afterparty, które podkręcają adrenalinę aż do wschodu słońca. Niezależnie od tego, czy headbangasz pod sceną, czy śpiewasz z przyjaciółmi pod gwiazdami, to właśnie tutaj powstają niezapomniane wspomnienia. Zbierz ekipę, podkręć głośność i przygotuj się na weekend napędzany czystą rockową energią. Summer Sound Festival — tam, gdzie legendy spotykają kolejne pokolenia.',
     ticketTypes: [
       { id: 't2-1', name: 'Miejsce stojące', price: 75, available: 1000 },
-      { id: 't2-2', name: 'Golden Cirle', price: 125, available: 500 },
+      { id: 't2-2', name: 'Golden Circle', price: 125, available: 500 },
     ],
   },
   {
@@ -83,7 +83,7 @@ export const events: Event[] = [
   },
   {
     id: '5',
-    title: 'Noc Kabaretowa: Gwiazdy Stand-up',
+    title: 'Noc Kabaretowa: Gwiazdy Stand-upu',
     category: 'Kabaret',
     Data: '2026-03-30',
     Godzina: '20:30',
@@ -150,8 +150,8 @@ export const events: Event[] = [
   category: 'Teatr',
   Data: '2026-07-20',
   Godzina: '18:00',
-  Miejsce: 'Wielki Theatre',
-  Lokalizacja: 'Gdansk, Polska',
+  Miejsce: 'Wielki Teatr',
+  Lokalizacja: 'Gdańsk, Polska',
   image: 'https://images.unsplash.com/photo-1503095396549-807759245b35',
   description:'',
   ticketTypes: [

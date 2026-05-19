@@ -25,18 +25,18 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/90 backdrop-blur">
-      <div className="container mx-auto px-4 py-2 flex items-center justify-between">
+      <div className="container mx-auto flex items-center justify-between px-4 py-2">
         <Link to="/" className="flex items-center gap-2">
-          <img src="/ikonasigmy.svg" alt="PanBilecik" className="w-10 h-10" />
+          <img src="/ikonasigmy.svg" alt="PanBilecik" className="h-10 w-10" />
           <span className="text-xl">PanBilecik</span>
         </Link>
 
-        <nav className="hidden md:flex items-center gap-6">
-          <Link to="/events" className="hover:text-blue-600 transition-colors">
+        <nav className="hidden items-center gap-6 md:flex">
+          <Link to="/events" className="transition-colors hover:text-blue-600">
             Wszystkie wydarzenia
           </Link>
-          <Link to="/events-archive" className="hover:text-blue-600 transition-colors">
-            Archiwum wydarzeÄąâ€ž
+          <Link to="/events-archive" className="transition-colors hover:text-blue-600">
+            Archiwum wydarzeń
           </Link>
         </nav>
 
@@ -50,15 +50,16 @@ export function Header() {
 
             <DropdownMenuContent align="end">
               {user && (
-                <div className="px-3 py-2 border-b mb-1">
+                <div className="mb-1 border-b px-3 py-2">
                   <p className="text-sm font-semibold">{user.username}</p>
                   <p className="text-xs text-muted-foreground">{user.email}</p>
                 </div>
               )}
+
               {!isLoggedIn && (
                 <>
                   <DropdownMenuItem asChild>
-                    <Link to="/login">Login</Link>
+                    <Link to="/login">Logowanie</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link to="/register">Rejestracja</Link>
@@ -69,10 +70,10 @@ export function Header() {
               {isLoggedIn && (
                 <>
                   <DropdownMenuItem asChild>
-                    <Link to="/profile">SzczegÄ‚Ĺ‚Äąâ€šy</Link>
+                    <Link to="/profile">Szczegóły konta</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/upcoming-events">NadchodzĂ„â€¦ce wydarzenia</Link>
+                    <Link to="/upcoming-events">Nadchodzące wydarzenia</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link to="/my-events">Moje wydarzenia</Link>
@@ -85,7 +86,7 @@ export function Header() {
                       <Link to="/admin">Panel admina</Link>
                     </DropdownMenuItem>
                   )}
-                  <DropdownMenuItem onClick={handleLogout}>Wyloguj siÄ™</DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleLogout}>Wyloguj się</DropdownMenuItem>
                 </>
               )}
             </DropdownMenuContent>
@@ -93,10 +94,10 @@ export function Header() {
 
           <Link to="/checkout">
             <Button variant="outline" className="relative">
-              <ShoppingCart className="size-5 mr-2" />
+              <ShoppingCart className="mr-2 size-5" />
               Koszyk
               {itemCount > 0 && (
-                <Badge className="absolute -top-2 -right-2 size-6 flex items-center justify-center p-0 rounded-full">
+                <Badge className="absolute -top-2 -right-2 flex size-6 items-center justify-center rounded-full p-0">
                   {itemCount}
                 </Badge>
               )}

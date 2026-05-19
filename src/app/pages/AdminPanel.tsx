@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { AlertTriangle, Calendar, Edit3, Trash2, Flag, ShieldAlert } from "lucide-react";
+import { AlertTriangle, Calendar, Edit3, Flag, ShieldAlert, Trash2 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { Card, CardContent } from "../components/ui/card";
@@ -57,6 +57,11 @@ function formatDate(date: string) {
       });
 }
 
+function formatLocation(city?: string | null, venue?: string | null) {
+  if (city && venue) return `${venue}, ${city}`;
+  return venue || city || "Brak lokalizacji";
+}
+
 export function AdminPanel() {
   const { user, token, isLoading } = useAuth();
   const [reports, setReports] = useState<EventReport[]>([]);
@@ -64,8 +69,24 @@ export function AdminPanel() {
   const [loadingData, setLoadingData] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deletingEventId, setDeletingEventId] = useState<number | null>(null);
+  const [selectedEventIds, setSelectedEventIds] = useState<Set<number>>(new Set());
+  const [bulkCategory, setBulkCategory] = useState("");
+  const [bulkActionLoading, setBulkActionLoading] = useState<null | "delete" | "move">(null);
 
   const isAdmin = user?.is_admin === true;
+  const categories = useMemo(() => {
+    const unique = [...new Set(events.map((event) => event.category || "Inne"))].sort((a, b) =>
+      a.localeCompare(b, "pl")
+    );
+    return unique.length > 0 ? unique : ["Inne"];
+  }, [events]);
+
+  const selectedEvents = useMemo(
+    () => events.filter((event) => selectedEventIds.has(Number(event.id))),
+    [events, selectedEventIds]
+  );
+
+  const openReports = useMemo(() => reports.filter((report) => report.status === "open"), [reports]);
 
   useEffect(() => {
     let mounted = true;
@@ -103,9 +124,7 @@ export function AdminPanel() {
         const reportsData = await reportsResponse.json();
         const eventsData = await eventsResponse.json();
 
-        if (!mounted) {
-          return;
-        }
+        if (!mounted) return;
 
         setReports(Array.isArray(reportsData?.items) ? reportsData.items : []);
         setEvents(Array.isArray(eventsData) ? eventsData : []);
@@ -129,22 +148,13 @@ export function AdminPanel() {
     };
   }, [token, isAdmin]);
 
-  const openReports = useMemo(
-    () => reports.filter((report) => report.status === "open"),
-    [reports]
-  );
-
   async function handleDeleteEvent(eventId: number) {
-    if (!token) {
-      return;
-    }
+    if (!token) return;
 
     const confirmed = window.confirm(
       "Czy na pewno chcesz usunąć to wydarzenie? Spowoduje to też usunięcie zgłoszeń, ocen i zakupów powiązanych z tym wydarzeniem."
     );
-    if (!confirmed) {
-      return;
-    }
+    if (!confirmed) return;
 
     try {
       setDeletingEventId(eventId);
@@ -161,13 +171,112 @@ export function AdminPanel() {
       }
 
       toast.success("Wydarzenie zostało usunięte.");
-      setReports((prev) => prev.filter((report) => report.eventId !== eventId));
       setEvents((prev) => prev.filter((event) => Number(event.id) !== eventId));
+      setReports((prev) => prev.filter((report) => report.eventId !== eventId));
+      setSelectedEventIds((prev) => {
+        const next = new Set(prev);
+        next.delete(eventId);
+        return next;
+      });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Wystąpił nieznany błąd.");
     } finally {
       setDeletingEventId(null);
     }
+  }
+
+  async function handleBulkDelete() {
+    if (!token || selectedEvents.length === 0) return;
+
+    const confirmed = window.confirm(
+      `Czy na pewno chcesz usunąć ${selectedEvents.length} wydarzeń?`
+    );
+    if (!confirmed) return;
+
+    try {
+      setBulkActionLoading("delete");
+      const response = await fetch("/api/events?action=bulk-delete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ ids: [...selectedEventIds] }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data?.error || "Nie udało się usunąć wydarzeń.");
+      }
+
+      toast.success("Wydarzenia zostały usunięte.");
+      setEvents((prev) => prev.filter((event) => !selectedEventIds.has(Number(event.id))));
+      setReports((prev) => prev.filter((report) => !selectedEventIds.has(report.eventId)));
+      setSelectedEventIds(new Set());
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Wystąpił nieznany błąd.");
+    } finally {
+      setBulkActionLoading(null);
+    }
+  }
+
+  async function handleBulkMove() {
+    if (!token || selectedEvents.length === 0) return;
+
+    const category = bulkCategory.trim();
+    if (!category) {
+      toast.error("Wybierz kategorię docelową.");
+      return;
+    }
+
+    try {
+      setBulkActionLoading("move");
+      const response = await fetch("/api/events?action=bulk-move-category", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ ids: [...selectedEventIds], category }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data?.error || "Nie udało się przenieść wydarzeń.");
+      }
+
+      toast.success("Wydarzenia zostały przeniesione do nowej kategorii.");
+      setEvents((prev) =>
+        prev.map((event) =>
+          selectedEventIds.has(Number(event.id)) ? { ...event, category } : event
+        )
+      );
+      setSelectedEventIds(new Set());
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Wystąpił nieznany błąd.");
+    } finally {
+      setBulkActionLoading(null);
+    }
+  }
+
+  function toggleSelected(eventId: number) {
+    setSelectedEventIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(eventId)) {
+        next.delete(eventId);
+      } else {
+        next.add(eventId);
+      }
+      return next;
+    });
+  }
+
+  function selectAllVisible() {
+    setSelectedEventIds(new Set(events.map((event) => Number(event.id))));
+  }
+
+  function clearSelection() {
+    setSelectedEventIds(new Set());
   }
 
   if (isLoading) {
@@ -212,8 +321,8 @@ export function AdminPanel() {
           </div>
         </div>
         <p className="mt-4 max-w-3xl text-white/80">
-          Przeglądaj zgłoszenia użytkowników, sprawdzaj szczegóły wydarzeń i podejmuj działania bez
-          wychodzenia z panelu.
+          Przeglądaj zgłoszenia użytkowników, edytuj wydarzenia i wykonuj akcje zbiorcze bez
+          opuszczania panelu.
         </p>
       </div>
 
@@ -276,7 +385,7 @@ export function AdminPanel() {
                     <div className="space-y-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <h2 className="text-xl font-semibold text-slate-900">
-                          {report.event?.title || `Usunięte wydarzenie #${report.eventId}`}
+                          {report.event?.title || `Wydarzenie #${report.eventId}`}
                         </h2>
                         <Badge variant={report.status === "open" ? "default" : "secondary"}>
                           {report.status === "open" ? "Otwarte" : report.status}
@@ -311,7 +420,9 @@ export function AdminPanel() {
                   <div className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-2">
                     <div>
                       <p className="text-xs uppercase tracking-wide text-slate-500">Szczegóły zgłoszenia</p>
-                      <p className="mt-1 text-sm text-slate-700">{report.details || "Brak dodatkowego opisu."}</p>
+                      <p className="mt-1 text-sm text-slate-700">
+                        {report.details || "Brak dodatkowego opisu."}
+                      </p>
                     </div>
                     <div className="space-y-1 text-sm text-slate-600">
                       <p>
@@ -321,9 +432,7 @@ export function AdminPanel() {
                       <p>
                         <span className="font-medium text-slate-800">Lokalizacja:</span>{" "}
                         {report.event
-                          ? report.event.city
-                            ? `${report.event.venue || report.event.location}, ${report.event.city}`
-                            : report.event.venue || report.event.location || "Brak lokalizacji"
+                          ? formatLocation(report.event.city, report.event.venue)
                           : "Brak danych"}
                       </p>
                       <p>
@@ -339,6 +448,67 @@ export function AdminPanel() {
         </TabsContent>
 
         <TabsContent value="events" className="space-y-4">
+          <Card className="border-slate-200">
+            <CardContent className="space-y-4 p-5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-semibold">Akcje zbiorcze</h2>
+                  <p className="text-sm text-slate-600">
+                    Zaznacz wydarzenia i wykonaj operację na wielu pozycjach jednocześnie.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" variant="outline" onClick={selectAllVisible} disabled={events.length === 0}>
+                    Zaznacz wszystko
+                  </Button>
+                  <Button type="button" variant="outline" onClick={clearSelection} disabled={selectedEventIds.size === 0}>
+                    Wyczyść zaznaczenie
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-end gap-3">
+                <div className="min-w-64 flex-1">
+                  <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="bulkCategory">
+                    Przenieś do kategorii
+                  </label>
+                  <select
+                    id="bulkCategory"
+                    value={bulkCategory}
+                    onChange={(e) => setBulkCategory(e.target.value)}
+                    className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                  >
+                    <option value="">Wybierz kategorię</option>
+                    {categories.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <Button
+                  type="button"
+                  onClick={handleBulkMove}
+                  disabled={selectedEventIds.size === 0 || bulkActionLoading === "move"}
+                >
+                  {bulkActionLoading === "move" ? "Przenoszenie..." : "Przenieś zaznaczone"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={handleBulkDelete}
+                  disabled={selectedEventIds.size === 0 || bulkActionLoading === "delete"}
+                >
+                  {bulkActionLoading === "delete" ? "Usuwanie..." : "Usuń zaznaczone"}
+                </Button>
+              </div>
+
+              <p className="text-sm text-slate-600">
+                Zaznaczono: <span className="font-semibold">{selectedEventIds.size}</span>
+              </p>
+            </CardContent>
+          </Card>
+
           {loadingData && <p className="text-gray-500">Ładowanie wydarzeń...</p>}
 
           {!loadingData && events.length === 0 && (
@@ -348,43 +518,57 @@ export function AdminPanel() {
           )}
 
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {events.map((event) => (
-              <Card key={event.id} className="border-slate-200">
-                <CardContent className="space-y-3 p-5">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <Badge>{event.category || "Inne"}</Badge>
+            {events.map((event) => {
+              const eventId = Number(event.id);
+              const isSelected = selectedEventIds.has(eventId);
+
+              return (
+                <Card key={event.id} className={`border-slate-200 ${isSelected ? "ring-2 ring-emerald-500" : ""}`}>
+                  <CardContent className="space-y-3 p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <label className="flex items-start gap-3">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleSelected(eventId)}
+                          className="mt-1 h-4 w-4 rounded border-slate-300 text-emerald-600"
+                        />
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <Badge>{event.category || "Inne"}</Badge>
+                          </div>
+                          <h2 className="text-lg font-semibold text-slate-900">{event.title}</h2>
+                        </div>
+                      </label>
                     </div>
-                    <h2 className="text-lg font-semibold text-slate-900">{event.title}</h2>
+
                     <p className="text-sm text-slate-500">
                       {event.creator_username || "Nieznany"} | {formatDate(event.date)}
                     </p>
-                    <p className="text-sm text-slate-600">
-                      {event.city ? `${event.venue || ""}, ${event.city}` : event.venue || "Brak lokalizacji"}
-                    </p>
-                  </div>
+                    <p className="text-sm text-slate-600">{formatLocation(event.city, event.venue)}</p>
 
-                  <div className="flex flex-wrap gap-2">
-                    <Button asChild variant="outline" size="sm">
-                      <Link to={`/my-events?edit=${event.id}`}>
-                        <Edit3 className="mr-2 size-4" />
-                        Edytuj
-                      </Link>
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="destructive"
-                      disabled={deletingEventId === Number(event.id)}
-                      onClick={() => handleDeleteEvent(Number(event.id))}
-                    >
-                      <Trash2 className="mr-2 size-4" />
-                      {deletingEventId === Number(event.id) ? "Usuwanie..." : "Usuń"}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                    <div className="flex flex-wrap gap-2">
+                      <Button asChild variant="outline" size="sm">
+                        <Link to={`/my-events?edit=${event.id}`}>
+                          <Edit3 className="mr-2 size-4" />
+                          Edytuj
+                        </Link>
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="destructive"
+                        disabled={deletingEventId === eventId}
+                        onClick={() => handleDeleteEvent(eventId)}
+                      >
+                        <Trash2 className="mr-2 size-4" />
+                        {deletingEventId === eventId ? "Usuwanie..." : "Usuń"}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </TabsContent>
       </Tabs>
