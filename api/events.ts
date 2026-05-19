@@ -93,6 +93,11 @@ function parseIds(input: unknown) {
     : [];
 }
 
+function normalizeDateFilter(input: unknown) {
+  const value = String(input ?? "").trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
+}
+
 export default async function handler(req: any, res: any) {
   if (req.method === "GET" && String(req.query?.reports) === "1") {
     try {
@@ -212,6 +217,217 @@ export default async function handler(req: any, res: any) {
     } catch (error: any) {
       console.error("EVENT REPORTS GET ERROR:", error);
       return res.status(500).json({ error: error.message ?? "Reports fetch failed" });
+    }
+  }
+
+  if (req.method === "GET" && String(req.query?.analytics) === "1") {
+    try {
+      const authUser = await authenticateRequest(req);
+      if (!authUser) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      if (!authUser.is_admin) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+
+      await ensureTicketPurchasesTable();
+      const userJoinColumn = await getUsersJoinColumn();
+      const usernameFilter = String(req.query?.user ?? "").trim() || null;
+      const categoryFilter = String(req.query?.category ?? "").trim() || null;
+      const fromDate = normalizeDateFilter(req.query?.from);
+      const toDate = normalizeDateFilter(req.query?.to);
+
+      const rows =
+        userJoinColumn === "user_id"
+          ? await sql`
+              SELECT
+                tp.id,
+                tp.user_id,
+                tp.event_id,
+                tp.event_title,
+                tp.ticket_type_name,
+                tp.quantity,
+                tp.unit_price,
+                tp.line_total,
+                tp.purchased_at,
+                u.username AS purchaser_username,
+                e.title AS event_name,
+                e.date AS event_date,
+                COALESCE(c.name, 'Bez kategorii') AS category_name
+              FROM ticket_purchases tp
+              LEFT JOIN events e ON e.id = tp.event_id
+              LEFT JOIN categories c ON c.id = e.category_id
+              LEFT JOIN users u ON u.user_id = tp.user_id
+              WHERE tp.refunded_at IS NULL
+                AND (${usernameFilter}::text IS NULL OR LOWER(COALESCE(u.username, '')) LIKE LOWER('%' || ${usernameFilter} || '%'))
+                AND (${categoryFilter}::text IS NULL OR LOWER(COALESCE(c.name, 'Bez kategorii')) = LOWER(${categoryFilter}))
+                AND (${fromDate}::date IS NULL OR tp.purchased_at >= ${fromDate}::date)
+                AND (${toDate}::date IS NULL OR tp.purchased_at < (${toDate}::date + INTERVAL '1 day'))
+              ORDER BY tp.purchased_at DESC, tp.id DESC
+            `
+          : userJoinColumn === "id"
+            ? await sql`
+                SELECT
+                  tp.id,
+                  tp.user_id,
+                  tp.event_id,
+                  tp.event_title,
+                  tp.ticket_type_name,
+                  tp.quantity,
+                  tp.unit_price,
+                  tp.line_total,
+                  tp.purchased_at,
+                  u.username AS purchaser_username,
+                  e.title AS event_name,
+                  e.date AS event_date,
+                  COALESCE(c.name, 'Bez kategorii') AS category_name
+                FROM ticket_purchases tp
+                LEFT JOIN events e ON e.id = tp.event_id
+                LEFT JOIN categories c ON c.id = e.category_id
+                LEFT JOIN users u ON u.id = tp.user_id
+                WHERE tp.refunded_at IS NULL
+                  AND (${usernameFilter}::text IS NULL OR LOWER(COALESCE(u.username, '')) LIKE LOWER('%' || ${usernameFilter} || '%'))
+                  AND (${categoryFilter}::text IS NULL OR LOWER(COALESCE(c.name, 'Bez kategorii')) = LOWER(${categoryFilter}))
+                  AND (${fromDate}::date IS NULL OR tp.purchased_at >= ${fromDate}::date)
+                  AND (${toDate}::date IS NULL OR tp.purchased_at < (${toDate}::date + INTERVAL '1 day'))
+                ORDER BY tp.purchased_at DESC, tp.id DESC
+              `
+            : await sql`
+                SELECT
+                  tp.id,
+                  tp.user_id,
+                  tp.event_id,
+                  tp.event_title,
+                  tp.ticket_type_name,
+                  tp.quantity,
+                  tp.unit_price,
+                  tp.line_total,
+                  tp.purchased_at,
+                  NULL::text AS purchaser_username,
+                  e.title AS event_name,
+                  e.date AS event_date,
+                  COALESCE(c.name, 'Bez kategorii') AS category_name
+                FROM ticket_purchases tp
+                LEFT JOIN events e ON e.id = tp.event_id
+                LEFT JOIN categories c ON c.id = e.category_id
+                WHERE tp.refunded_at IS NULL
+                  AND (${categoryFilter}::text IS NULL OR LOWER(COALESCE(c.name, 'Bez kategorii')) = LOWER(${categoryFilter}))
+                  AND (${fromDate}::date IS NULL OR tp.purchased_at >= ${fromDate}::date)
+                  AND (${toDate}::date IS NULL OR tp.purchased_at < (${toDate}::date + INTERVAL '1 day'))
+                ORDER BY tp.purchased_at DESC, tp.id DESC
+              `;
+
+      const items = rows.map((row: any) => {
+        const lineTotal = Number(row.line_total);
+        const commission = Number((lineTotal * 0.05).toFixed(2));
+        return {
+          id: Number(row.id),
+          userId: Number(row.user_id),
+          eventId: Number(row.event_id),
+          eventTitle: String(row.event_title ?? row.event_name ?? "Nieznane wydarzenie"),
+          ticketTypeName: String(row.ticket_type_name ?? ""),
+          quantity: Number(row.quantity ?? 0),
+          unitPrice: Number(row.unit_price ?? 0),
+          lineTotal,
+          commission,
+          purchasedAt: row.purchased_at,
+          username: row.purchaser_username ? String(row.purchaser_username) : "Użytkownik",
+          category: row.category_name ? String(row.category_name) : "Bez kategorii",
+          eventDate: row.event_date,
+        };
+      });
+
+      const summary = items.reduce(
+        (acc, item) => {
+          acc.subtotal += item.lineTotal;
+          acc.commission += item.commission;
+          acc.purchasesCount += 1;
+          return acc;
+        },
+        {
+          subtotal: 0,
+          commission: 0,
+          purchasesCount: 0,
+        }
+      );
+
+      summary.subtotal = Number(summary.subtotal.toFixed(2));
+      summary.commission = Number(summary.commission.toFixed(2));
+      summary.total = Number((summary.subtotal + summary.commission).toFixed(2));
+
+      const byUserMap = new Map<
+        string,
+        { username: string; subtotal: number; commission: number; purchasesCount: number }
+      >();
+      const byCategoryMap = new Map<
+        string,
+        { category: string; subtotal: number; commission: number; purchasesCount: number }
+      >();
+
+      for (const item of items) {
+        const userKey = item.username || "Użytkownik";
+        const userEntry =
+          byUserMap.get(userKey) ||
+          {
+            username: userKey,
+            subtotal: 0,
+            commission: 0,
+            purchasesCount: 0,
+          };
+        userEntry.subtotal += item.lineTotal;
+        userEntry.commission += item.commission;
+        userEntry.purchasesCount += 1;
+        byUserMap.set(userKey, userEntry);
+
+        const categoryKey = item.category || "Bez kategorii";
+        const categoryEntry =
+          byCategoryMap.get(categoryKey) ||
+          {
+            category: categoryKey,
+            subtotal: 0,
+            commission: 0,
+            purchasesCount: 0,
+          };
+        categoryEntry.subtotal += item.lineTotal;
+        categoryEntry.commission += item.commission;
+        categoryEntry.purchasesCount += 1;
+        byCategoryMap.set(categoryKey, categoryEntry);
+      }
+
+      const byUser = [...byUserMap.values()]
+        .map((entry) => ({
+          ...entry,
+          subtotal: Number(entry.subtotal.toFixed(2)),
+          commission: Number(entry.commission.toFixed(2)),
+          total: Number((entry.subtotal + entry.commission).toFixed(2)),
+        }))
+        .sort((a, b) => b.commission - a.commission);
+
+      const byCategory = [...byCategoryMap.values()]
+        .map((entry) => ({
+          ...entry,
+          subtotal: Number(entry.subtotal.toFixed(2)),
+          commission: Number(entry.commission.toFixed(2)),
+          total: Number((entry.subtotal + entry.commission).toFixed(2)),
+        }))
+        .sort((a, b) => b.commission - a.commission);
+
+      return res.status(200).json({
+        summary,
+        byUser,
+        byCategory,
+        items: items.slice(0, 50),
+        filters: {
+          user: usernameFilter,
+          category: categoryFilter,
+          from: fromDate,
+          to: toDate,
+        },
+      });
+    } catch (error: any) {
+      console.error("EVENT ANALYTICS GET ERROR:", error);
+      return res.status(500).json({ error: error.message ?? "Analytics fetch failed" });
     }
   }
 

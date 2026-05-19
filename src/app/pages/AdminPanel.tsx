@@ -1,6 +1,18 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { AlertTriangle, Calendar, Edit3, Flag, ShieldAlert, Trash2 } from "lucide-react";
+import {
+  AlertTriangle,
+  Calendar,
+  CalendarRange,
+  DollarSign,
+  Edit3,
+  Flag,
+  Search,
+  ShieldAlert,
+  Trash2,
+  TrendingUp,
+  Users,
+} from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { Card, CardContent } from "../components/ui/card";
@@ -39,6 +51,49 @@ type EventReport = {
   } | null;
 };
 
+type CommissionAnalyticsItem = {
+  id: number;
+  userId: number;
+  eventId: number;
+  eventTitle: string;
+  ticketTypeName: string;
+  quantity: number;
+  unitPrice: number;
+  lineTotal: number;
+  commission: number;
+  purchasedAt: string;
+  username: string;
+  category: string;
+  eventDate: string;
+};
+
+type CommissionAnalyticsSummary = {
+  subtotal: number;
+  commission: number;
+  total: number;
+  purchasesCount: number;
+};
+
+type CommissionAnalyticsBucket = {
+  subtotal: number;
+  commission: number;
+  total: number;
+  purchasesCount: number;
+};
+
+type CommissionAnalyticsResponse = {
+  summary: CommissionAnalyticsSummary;
+  byUser: Array<CommissionAnalyticsBucket & { username: string }>;
+  byCategory: Array<CommissionAnalyticsBucket & { category: string }>;
+  items: CommissionAnalyticsItem[];
+  filters: {
+    user: string | null;
+    category: string | null;
+    from: string | null;
+    to: string | null;
+  };
+};
+
 const reasonLabels: Record<string, string> = {
   spam: "Spam",
   scam: "Oszustwo",
@@ -62,16 +117,29 @@ function formatLocation(city?: string | null, venue?: string | null) {
   return venue || city || "Brak lokalizacji";
 }
 
+function formatMoney(amount: number) {
+  return `${amount.toFixed(2)} zł`;
+}
+
 export function AdminPanel() {
   const { user, token, isLoading } = useAuth();
   const [reports, setReports] = useState<EventReport[]>([]);
   const [events, setEvents] = useState<AdminEvent[]>([]);
+  const [analytics, setAnalytics] = useState<CommissionAnalyticsResponse | null>(null);
   const [loadingData, setLoadingData] = useState(true);
+  const [analyticsLoading, setAnalyticsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [analyticsError, setAnalyticsError] = useState<string | null>(null);
   const [deletingEventId, setDeletingEventId] = useState<number | null>(null);
   const [selectedEventIds, setSelectedEventIds] = useState<Set<number>>(new Set());
   const [bulkCategory, setBulkCategory] = useState("");
   const [bulkActionLoading, setBulkActionLoading] = useState<null | "delete" | "move">(null);
+  const [commissionFilters, setCommissionFilters] = useState({
+    user: "",
+    category: "",
+    from: "",
+    to: "",
+  });
 
   const isAdmin = user?.is_admin === true;
   const categories = useMemo(() => {
@@ -87,6 +155,43 @@ export function AdminPanel() {
   );
 
   const openReports = useMemo(() => reports.filter((report) => report.status === "open"), [reports]);
+
+  async function loadAnalytics(filters = commissionFilters) {
+    if (!token || !isAdmin) {
+      setAnalytics(null);
+      setAnalyticsLoading(false);
+      return;
+    }
+
+    try {
+      setAnalyticsLoading(true);
+      setAnalyticsError(null);
+
+      const params = new URLSearchParams({ analytics: "1" });
+      if (filters.user.trim()) params.set("user", filters.user.trim());
+      if (filters.category.trim()) params.set("category", filters.category.trim());
+      if (filters.from.trim()) params.set("from", filters.from.trim());
+      if (filters.to.trim()) params.set("to", filters.to.trim());
+
+      const response = await fetch(`/api/events?${params.toString()}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data?.error || "Nie udało się pobrać danych o prowizjach.");
+      }
+
+      setAnalytics(data as CommissionAnalyticsResponse);
+    } catch (err) {
+      setAnalytics(null);
+      setAnalyticsError(err instanceof Error ? err.message : "Wystąpił nieznany błąd.");
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  }
 
   useEffect(() => {
     let mounted = true;
@@ -142,6 +247,7 @@ export function AdminPanel() {
     }
 
     loadData();
+    void loadAnalytics();
 
     return () => {
       mounted = false;
@@ -259,6 +365,22 @@ export function AdminPanel() {
     }
   }
 
+  async function handleAnalyticsSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await loadAnalytics(commissionFilters);
+  }
+
+  function clearAnalyticsFilters() {
+    const nextFilters = {
+      user: "",
+      category: "",
+      from: "",
+      to: "",
+    };
+    setCommissionFilters(nextFilters);
+    void loadAnalytics(nextFilters);
+  }
+
   function toggleSelected(eventId: number) {
     setSelectedEventIds((prev) => {
       const next = new Set(prev);
@@ -363,8 +485,9 @@ export function AdminPanel() {
       </div>
 
       <Tabs defaultValue="reports" className="space-y-6">
-        <TabsList className="grid w-full max-w-xl grid-cols-2">
+        <TabsList className="grid w-full max-w-3xl grid-cols-3">
           <TabsTrigger value="reports">Zgłoszenia</TabsTrigger>
+          <TabsTrigger value="commission">Dochód</TabsTrigger>
           <TabsTrigger value="events">Wydarzenia</TabsTrigger>
         </TabsList>
 
@@ -445,6 +568,268 @@ export function AdminPanel() {
               </Card>
             ))}
           </div>
+        </TabsContent>
+
+        <TabsContent value="commission" className="space-y-4">
+          <Card className="border-slate-200">
+            <CardContent className="space-y-4 p-5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-semibold">Dochód z prowizji</h2>
+                  <p className="text-sm text-slate-600">
+                    Prowizja 5% liczona jest od aktywnych zakupów biletów, bez zwróconych transakcji.
+                  </p>
+                </div>
+                <Button type="button" variant="outline" onClick={() => void loadAnalytics()}>
+                  Odśwież dane
+                </Button>
+              </div>
+
+              <form onSubmit={handleAnalyticsSubmit} className="grid gap-3 md:grid-cols-4">
+                <div className="md:col-span-2">
+                  <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="commissionUser">
+                    Użytkownik
+                  </label>
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+                    <input
+                      id="commissionUser"
+                      value={commissionFilters.user}
+                      onChange={(e) =>
+                        setCommissionFilters((prev) => ({ ...prev, user: e.target.value }))
+                      }
+                      placeholder="Szukaj po nazwie użytkownika"
+                      className="w-full rounded-md border border-slate-300 bg-white py-2 pl-10 pr-3 text-sm"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="commissionCategory">
+                    Kategoria
+                  </label>
+                  <select
+                    id="commissionCategory"
+                    value={commissionFilters.category}
+                    onChange={(e) =>
+                      setCommissionFilters((prev) => ({ ...prev, category: e.target.value }))
+                    }
+                    className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                  >
+                    <option value="">Wszystkie</option>
+                    {categories.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="commissionFrom">
+                    Od
+                  </label>
+                  <input
+                    id="commissionFrom"
+                    type="date"
+                    value={commissionFilters.from}
+                    onChange={(e) =>
+                      setCommissionFilters((prev) => ({ ...prev, from: e.target.value }))
+                    }
+                    className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="commissionTo">
+                    Do
+                  </label>
+                  <input
+                    id="commissionTo"
+                    type="date"
+                    value={commissionFilters.to}
+                    onChange={(e) =>
+                      setCommissionFilters((prev) => ({ ...prev, to: e.target.value }))
+                    }
+                    className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                  />
+                </div>
+                <div className="flex flex-wrap gap-2 md:col-span-4">
+                  <Button type="submit">Filtruj</Button>
+                  <Button type="button" variant="outline" onClick={clearAnalyticsFilters}>
+                    Wyczyść filtry
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+
+          {analyticsError && (
+            <Card className="border-red-200 bg-red-50">
+              <CardContent className="p-4 text-red-700">{analyticsError}</CardContent>
+            </Card>
+          )}
+
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <Card>
+              <CardContent className="flex items-center justify-between p-5">
+                <div>
+                  <p className="text-sm text-slate-500">Prowizja łącznie</p>
+                  <p className="text-3xl font-semibold">
+                    {analytics ? formatMoney(analytics.summary.commission) : analyticsLoading ? "..." : "0.00 zł"}
+                  </p>
+                </div>
+                <DollarSign className="size-10 text-emerald-600" />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="flex items-center justify-between p-5">
+                <div>
+                  <p className="text-sm text-slate-500">Suma sprzedaży</p>
+                  <p className="text-3xl font-semibold">
+                    {analytics ? formatMoney(analytics.summary.subtotal) : analyticsLoading ? "..." : "0.00 zł"}
+                  </p>
+                </div>
+                <TrendingUp className="size-10 text-blue-600" />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="flex items-center justify-between p-5">
+                <div>
+                  <p className="text-sm text-slate-500">Łącznie z prowizją</p>
+                  <p className="text-3xl font-semibold">
+                    {analytics ? formatMoney(analytics.summary.total) : analyticsLoading ? "..." : "0.00 zł"}
+                  </p>
+                </div>
+                <CalendarRange className="size-10 text-violet-600" />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="flex items-center justify-between p-5">
+                <div>
+                  <p className="text-sm text-slate-500">Transakcje</p>
+                  <p className="text-3xl font-semibold">
+                    {analytics ? analytics.summary.purchasesCount : analyticsLoading ? "..." : "0"}
+                  </p>
+                </div>
+                <Users className="size-10 text-amber-600" />
+              </CardContent>
+            </Card>
+          </div>
+
+          {analyticsLoading && <p className="text-gray-500">Ładowanie danych o prowizji...</p>}
+
+          {!analyticsLoading && analytics && (
+            <div className="grid gap-4 xl:grid-cols-2">
+              <Card className="border-slate-200">
+                <CardContent className="space-y-4 p-5">
+                  <h3 className="text-lg font-semibold">Dochód według użytkowników</h3>
+                  <div className="overflow-hidden rounded-2xl border border-slate-200">
+                    <table className="min-w-full divide-y divide-slate-200 text-sm">
+                      <thead className="bg-slate-50 text-left text-slate-600">
+                        <tr>
+                          <th className="px-4 py-3 font-medium">Użytkownik</th>
+                          <th className="px-4 py-3 font-medium">Prowizja</th>
+                          <th className="px-4 py-3 font-medium">Zakupy</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {analytics.byUser.length > 0 ? (
+                          analytics.byUser.map((row) => (
+                            <tr key={row.username}>
+                              <td className="px-4 py-3 font-medium text-slate-900">{row.username}</td>
+                              <td className="px-4 py-3">{formatMoney(row.commission)}</td>
+                              <td className="px-4 py-3">{row.purchasesCount}</td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td className="px-4 py-4 text-slate-500" colSpan={3}>
+                              Brak danych dla wybranych filtrów.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-slate-200">
+                <CardContent className="space-y-4 p-5">
+                  <h3 className="text-lg font-semibold">Dochód według kategorii</h3>
+                  <div className="overflow-hidden rounded-2xl border border-slate-200">
+                    <table className="min-w-full divide-y divide-slate-200 text-sm">
+                      <thead className="bg-slate-50 text-left text-slate-600">
+                        <tr>
+                          <th className="px-4 py-3 font-medium">Kategoria</th>
+                          <th className="px-4 py-3 font-medium">Prowizja</th>
+                          <th className="px-4 py-3 font-medium">Zakupy</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {analytics.byCategory.length > 0 ? (
+                          analytics.byCategory.map((row) => (
+                            <tr key={row.category}>
+                              <td className="px-4 py-3 font-medium text-slate-900">{row.category}</td>
+                              <td className="px-4 py-3">{formatMoney(row.commission)}</td>
+                              <td className="px-4 py-3">{row.purchasesCount}</td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td className="px-4 py-4 text-slate-500" colSpan={3}>
+                              Brak danych dla wybranych filtrów.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {!analyticsLoading && analytics && (
+            <Card className="border-slate-200">
+              <CardContent className="space-y-4 p-5">
+                <h3 className="text-lg font-semibold">Ostatnie transakcje</h3>
+                <div className="overflow-hidden rounded-2xl border border-slate-200">
+                  <table className="min-w-full divide-y divide-slate-200 text-sm">
+                    <thead className="bg-slate-50 text-left text-slate-600">
+                      <tr>
+                        <th className="px-4 py-3 font-medium">Użytkownik</th>
+                        <th className="px-4 py-3 font-medium">Wydarzenie</th>
+                        <th className="px-4 py-3 font-medium">Kategoria</th>
+                        <th className="px-4 py-3 font-medium">Zakup</th>
+                        <th className="px-4 py-3 font-medium text-right">Prowizja</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {analytics.items.length > 0 ? (
+                        analytics.items.map((item) => (
+                          <tr key={item.id}>
+                            <td className="px-4 py-3 font-medium text-slate-900">{item.username}</td>
+                            <td className="px-4 py-3">
+                              <div className="font-medium text-slate-900">{item.eventTitle}</div>
+                              <div className="text-xs text-slate-500">{item.ticketTypeName}</div>
+                            </td>
+                            <td className="px-4 py-3">{item.category}</td>
+                            <td className="px-4 py-3">{formatDate(item.purchasedAt)}</td>
+                            <td className="px-4 py-3 text-right">{formatMoney(item.commission)}</td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td className="px-4 py-4 text-slate-500" colSpan={5}>
+                            Brak transakcji dla wybranych filtrów.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="events" className="space-y-4">
