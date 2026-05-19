@@ -193,12 +193,12 @@ function formatLocation(city?: string | null, venue?: string | null) {
 }
 
 function formatMoney(amount: number) {
-  return `${amount.toFixed(2)} zĹ‚`;
+  return `${amount.toFixed(2)} zł`;
 }
 
 function renderStars(rating: number) {
   const value = Math.max(0, Math.min(5, Math.round(rating)));
-  return "â…â…â…â…â…".slice(0, value) + "â†â†â†â†â†".slice(0, 5 - value);
+  return "★★★★★".slice(0, value) + "☆☆☆☆☆".slice(0, 5 - value);
 }
 
 export function AdminPanel() {
@@ -381,13 +381,13 @@ export function AdminPanel() {
 
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(data?.error || "Nie udaĹ‚o siÄ™ pobraÄ‡ danych o prowizjach.");
+        throw new Error(data?.error || "Nie udało się pobrać danych o prowizjach.");
       }
 
       setAnalytics(data as CommissionAnalyticsResponse);
     } catch (err) {
       setAnalytics(null);
-      setAnalyticsError(err instanceof Error ? err.message : "WystÄ…piĹ‚ nieznany bĹ‚Ä…d.");
+      setAnalyticsError(err instanceof Error ? err.message : "Wystąpił nieznany błąd.");
     } finally {
       setAnalyticsLoading(false);
     }
@@ -419,13 +419,13 @@ export function AdminPanel() {
 
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(data?.error || "Nie udaĹ‚o siÄ™ pobraÄ‡ opinii uĹĽytkownikĂłw.");
+        throw new Error(data?.error || "Nie udało się pobrać opinii użytkowników.");
       }
 
       setUserReviews(data as UserReviewsResponse);
     } catch (err) {
       setUserReviews(null);
-      setUserReviewsError(err instanceof Error ? err.message : "WystÄ…piĹ‚ nieznany bĹ‚Ä…d.");
+      setUserReviewsError(err instanceof Error ? err.message : "Wystąpił nieznany błąd.");
     } finally {
       setUserReviewsLoading(false);
     }
@@ -453,13 +453,13 @@ export function AdminPanel() {
 
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(data?.error || "Nie udaĹ‚o siÄ™ pobraÄ‡ listy uĹĽytkownikĂłw.");
+        throw new Error(data?.error || "Nie udało się pobrać listy użytkowników.");
       }
 
       setAdminUsers(data as AdminUsersResponse);
     } catch (err) {
       setAdminUsers(null);
-      setAdminUsersError(err instanceof Error ? err.message : "WystÄ…piĹ‚ nieznany bĹ‚Ä…d.");
+      setAdminUsersError(err instanceof Error ? err.message : "Wystąpił nieznany błąd.");
     } finally {
       setAdminUsersLoading(false);
     }
@@ -469,7 +469,7 @@ export function AdminPanel() {
     if (!token) return;
 
     if (!until || !reason.trim()) {
-      toast.error("Podaj datÄ™ koĹ„ca bana i opis.");
+      toast.error("Podaj datę końca bana i opis.");
       return;
     }
 
@@ -485,14 +485,14 @@ export function AdminPanel() {
 
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(data?.error || "Nie udaĹ‚o siÄ™ zablokowaÄ‡ uĹĽytkownika.");
+        throw new Error(data?.error || "Nie udało się zablokować użytkownika.");
       }
 
-      toast.success("UĹĽytkownik zostaĹ‚ zablokowany.");
+      toast.success("Użytkownik został zablokowany.");
       void loadAdminUsers();
       void loadUserReviews();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "WystÄ…piĹ‚ nieznany bĹ‚Ä…d.");
+      toast.error(err instanceof Error ? err.message : "Wystąpił nieznany błąd.");
     }
   }
 
@@ -511,14 +511,14 @@ export function AdminPanel() {
 
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(data?.error || "Nie udaĹ‚o siÄ™ odblokowaÄ‡ uĹĽytkownika.");
+        throw new Error(data?.error || "Nie udało się odblokować użytkownika.");
       }
 
-      toast.success("UĹĽytkownik zostaĹ‚ odblokowany.");
+      toast.success("Użytkownik został odblokowany.");
       void loadAdminUsers();
       void loadUserReviews();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "WystÄ…piĹ‚ nieznany bĹ‚Ä…d.");
+      toast.error(err instanceof Error ? err.message : "Wystąpił nieznany błąd.");
     }
   }
 
@@ -548,11 +548,11 @@ export function AdminPanel() {
 
         if (!reportsResponse.ok) {
           const payload = await reportsResponse.json().catch(() => ({}));
-          throw new Error(payload?.error || "Nie udaĹ‚o siÄ™ pobraÄ‡ zgĹ‚oszeĹ„.");
+          throw new Error(payload?.error || "Nie udało się pobrać zgłoszeń.");
         }
 
         if (!eventsResponse.ok) {
-          throw new Error("Nie udaĹ‚o siÄ™ pobraÄ‡ wydarzeĹ„.");
+          throw new Error("Nie udało się pobrać wydarzeń.");
         }
 
         const reportsData = await reportsResponse.json();
@@ -564,7 +564,7 @@ export function AdminPanel() {
         setEvents(Array.isArray(eventsData) ? eventsData : []);
       } catch (err) {
         if (mounted) {
-          setError(err instanceof Error ? err.message : "WystÄ…piĹ‚ nieznany bĹ‚Ä…d.");
+          setError(err instanceof Error ? err.message : "Wystąpił nieznany błąd.");
           setReports([]);
           setEvents([]);
         }
@@ -589,7 +589,7 @@ export function AdminPanel() {
     if (!token) return;
 
     const confirmed = window.confirm(
-      "Czy na pewno chcesz usunÄ…Ä‡ to wydarzenie? Spowoduje to teĹĽ usuniÄ™cie zgĹ‚oszeĹ„, ocen i zakupĂłw powiÄ…zanych z tym wydarzeniem."
+      "Czy na pewno chcesz usunąć to wydarzenie? Spowoduje to też usunięcie zgłoszeń, ocen i zakupów powiązanych z tym wydarzeniem."
     );
     if (!confirmed) return;
 
@@ -604,10 +604,10 @@ export function AdminPanel() {
 
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(data?.error || "Nie udaĹ‚o siÄ™ usunÄ…Ä‡ wydarzenia.");
+        throw new Error(data?.error || "Nie udało się usunąć wydarzenia.");
       }
 
-      toast.success("Wydarzenie zostaĹ‚o usuniÄ™te.");
+      toast.success("Wydarzenie zostało usunięte.");
       setEvents((prev) => prev.filter((event) => Number(event.id) !== eventId));
       setReports((prev) => prev.filter((report) => report.eventId !== eventId));
       setSelectedEventIds((prev) => {
@@ -616,7 +616,7 @@ export function AdminPanel() {
         return next;
       });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "WystÄ…piĹ‚ nieznany bĹ‚Ä…d.");
+      toast.error(err instanceof Error ? err.message : "Wystąpił nieznany błąd.");
     } finally {
       setDeletingEventId(null);
     }
@@ -626,7 +626,7 @@ export function AdminPanel() {
     if (!token || visibleSelectedEvents.length === 0) return;
 
     const confirmed = window.confirm(
-      `Czy na pewno chcesz usunÄ…Ä‡ ${visibleSelectedEvents.length} wydarzeĹ„?`
+      `Czy na pewno chcesz usunąć ${visibleSelectedEvents.length} wydarzeń?`
     );
     if (!confirmed) return;
 
@@ -643,15 +643,15 @@ export function AdminPanel() {
 
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(data?.error || "Nie udaĹ‚o siÄ™ usunÄ…Ä‡ wydarzeĹ„.");
+        throw new Error(data?.error || "Nie udało się usunąć wydarzeń.");
       }
 
-      toast.success("Wydarzenia zostaĹ‚y usuniÄ™te.");
+      toast.success("Wydarzenia zostały usunięte.");
       setEvents((prev) => prev.filter((event) => !visibleSelectedEventIds.has(Number(event.id))));
       setReports((prev) => prev.filter((report) => !visibleSelectedEventIds.has(report.eventId)));
       setSelectedEventIds(new Set());
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "WystÄ…piĹ‚ nieznany bĹ‚Ä…d.");
+      toast.error(err instanceof Error ? err.message : "Wystąpił nieznany błąd.");
     } finally {
       setBulkActionLoading(null);
     }
@@ -662,7 +662,7 @@ export function AdminPanel() {
 
     const category = bulkCategory.trim();
     if (!category) {
-      toast.error("Wybierz kategoriÄ™ docelowÄ….");
+      toast.error("Wybierz kategorię docelową.");
       return;
     }
 
@@ -679,10 +679,10 @@ export function AdminPanel() {
 
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(data?.error || "Nie udaĹ‚o siÄ™ przenieĹ›Ä‡ wydarzeĹ„.");
+        throw new Error(data?.error || "Nie udało się przenieść wydarzeń.");
       }
 
-      toast.success("Wydarzenia zostaĹ‚y przeniesione do nowej kategorii.");
+      toast.success("Wydarzenia zostały przeniesione do nowej kategorii.");
       setEvents((prev) =>
         prev.map((event) =>
           visibleSelectedEventIds.has(Number(event.id)) ? { ...event, category } : event
@@ -690,7 +690,7 @@ export function AdminPanel() {
       );
       setSelectedEventIds(new Set());
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "WystÄ…piĹ‚ nieznany bĹ‚Ä…d.");
+      toast.error(err instanceof Error ? err.message : "Wystąpił nieznany błąd.");
     } finally {
       setBulkActionLoading(null);
     }
@@ -765,7 +765,7 @@ export function AdminPanel() {
   if (isLoading) {
     return (
       <div className="mx-auto max-w-6xl px-4 py-10">
-        <p className="text-gray-500">Ĺadowanie panelu...</p>
+        <p className="text-gray-500">Ładowanie panelu...</p>
       </div>
     );
   }
@@ -780,11 +780,11 @@ export function AdminPanel() {
               <h1 className="text-2xl font-semibold">Panel administratora</h1>
             </div>
             <p className="text-amber-800">
-              DostÄ™p do tego widoku majÄ… tylko zalogowani administratorzy.
+              Dostęp do tego widoku mają tylko zalogowani administratorzy.
             </p>
             {!user && (
               <Button asChild>
-                <Link to="/login">PrzejdĹş do logowania</Link>
+                <Link to="/login">Przejdź do logowania</Link>
               </Button>
             )}
           </CardContent>
@@ -804,7 +804,7 @@ export function AdminPanel() {
           </div>
         </div>
         <p className="mt-4 max-w-3xl text-slate-600">
-          PrzeglÄ…daj zgĹ‚oszenia uĹĽytkownikĂłw, edytuj wydarzenia i wykonuj akcje zbiorcze bez
+          Przeglądaj zgłoszenia użytkowników, edytuj wydarzenia i wykonuj akcje zbiorcze bez
           opuszczania panelu.
         </p>
       </div>
@@ -819,7 +819,7 @@ export function AdminPanel() {
         <Card>
           <CardContent className="flex items-center justify-between p-5">
             <div>
-              <p className="text-sm text-slate-500">Otwarte zgĹ‚oszenia</p>
+              <p className="text-sm text-slate-500">Otwarte zgłoszenia</p>
               <p className="text-3xl font-semibold">{openReports.length}</p>
             </div>
             <Flag className="size-10 text-amber-600" />
@@ -828,7 +828,7 @@ export function AdminPanel() {
         <Card>
           <CardContent className="flex items-center justify-between p-5">
             <div>
-              <p className="text-sm text-slate-500">Wszystkie zgĹ‚oszenia</p>
+              <p className="text-sm text-slate-500">Wszystkie zgłoszenia</p>
               <p className="text-3xl font-semibold">{reports.length}</p>
             </div>
             <AlertTriangle className="size-10 text-rose-600" />
@@ -855,11 +855,11 @@ export function AdminPanel() {
         </TabsList>
 
         <TabsContent value="reports" className="space-y-4">
-          {loadingData && <p className="text-gray-500">Ĺadowanie zgĹ‚oszeĹ„...</p>}
+          {loadingData && <p className="text-gray-500">Ładowanie zgłoszeń...</p>}
 
           {!loadingData && reports.length === 0 && (
             <Card>
-              <CardContent className="p-6 text-gray-600">Brak zgĹ‚oszeĹ„ do wyĹ›wietlenia.</CardContent>
+              <CardContent className="p-6 text-gray-600">Brak zgłoszeń do wyświetlenia.</CardContent>
             </Card>
           )}
 
@@ -879,7 +879,7 @@ export function AdminPanel() {
                         <Badge variant="outline">{reasonLabels[report.reason] || report.reason}</Badge>
                       </div>
                       <p className="text-sm text-slate-500">
-                        ZgĹ‚oszone przez {report.reporterUsername} dnia {formatDate(report.createdAt)}
+                        Zgłoszone przez {report.reporterUsername} dnia {formatDate(report.createdAt)}
                       </p>
                     </div>
 
@@ -898,14 +898,14 @@ export function AdminPanel() {
                         onClick={() => handleDeleteEvent(report.eventId)}
                       >
                         <Trash2 className="mr-2 size-4" />
-                        {deletingEventId === report.eventId ? "Usuwanie..." : "UsuĹ„ wydarzenie"}
+                        {deletingEventId === report.eventId ? "Usuwanie..." : "Usuń wydarzenie"}
                       </Button>
                     </div>
                   </div>
 
                   <div className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-2">
                     <div>
-                      <p className="text-xs uppercase tracking-wide text-slate-500">SzczegĂłĹ‚y zgĹ‚oszenia</p>
+                      <p className="text-xs uppercase tracking-wide text-slate-500">Szczegóły zgłoszenia</p>
                       <p className="mt-1 text-sm text-slate-700">
                         {report.details || "Brak dodatkowego opisu."}
                       </p>
@@ -922,7 +922,7 @@ export function AdminPanel() {
                           : "Brak danych"}
                       </p>
                       <p>
-                        <span className="font-medium text-slate-800">ZgĹ‚oszenie zaktualizowano:</span>{" "}
+                        <span className="font-medium text-slate-800">Zgłoszenie zaktualizowano:</span>{" "}
                         {formatDate(report.updatedAt)}
                       </p>
                     </div>
@@ -938,20 +938,20 @@ export function AdminPanel() {
             <CardContent className="space-y-4 p-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-lg font-semibold">DochĂłd z prowizji</h2>
+                  <h2 className="text-lg font-semibold">Dochód z prowizji</h2>
                   <p className="text-sm text-slate-600">
-                    Prowizja 5% liczona jest od aktywnych zakupĂłw biletĂłw, bez zwrĂłconych transakcji.
+                    Prowizja 5% liczona jest od aktywnych zakupów biletów, bez zwróconych transakcji.
                   </p>
                 </div>
                 <Button type="button" variant="outline" onClick={() => void loadAnalytics()}>
-                  OdĹ›wieĹĽ dane
+                  Odśwież dane
                 </Button>
               </div>
 
               <form onSubmit={handleAnalyticsSubmit} className="grid gap-3 md:grid-cols-4">
                 <div className="md:col-span-2">
                   <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="commissionUser">
-                    UĹĽytkownik
+                    Użytkownik
                   </label>
                   <div className="relative">
                     <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
@@ -961,7 +961,7 @@ export function AdminPanel() {
                       onChange={(e) =>
                         setCommissionFilters((prev) => ({ ...prev, user: e.target.value }))
                       }
-                      placeholder="Szukaj po nazwie uĹĽytkownika"
+                      placeholder="Szukaj po nazwie użytkownika"
                       className="w-full rounded-md border border-slate-300 bg-white py-2 pl-10 pr-3 text-sm"
                     />
                   </div>
@@ -1017,7 +1017,7 @@ export function AdminPanel() {
                 <div className="flex flex-wrap gap-2 md:col-span-4">
                   <Button type="submit">Filtruj</Button>
                   <Button type="button" variant="outline" onClick={clearAnalyticsFilters}>
-                    WyczyĹ›Ä‡ filtry
+                    Wyczyść filtry
                   </Button>
                 </div>
               </form>
@@ -1034,9 +1034,9 @@ export function AdminPanel() {
             <Card>
               <CardContent className="flex items-center justify-between p-5">
                 <div>
-                  <p className="text-sm text-slate-500">Prowizja Ĺ‚Ä…cznie</p>
+                  <p className="text-sm text-slate-500">Prowizja łącznie</p>
                   <p className="text-3xl font-semibold">
-                    {analytics ? formatMoney(analytics.summary.commission) : analyticsLoading ? "..." : "0.00 zĹ‚"}
+                    {analytics ? formatMoney(analytics.summary.commission) : analyticsLoading ? "..." : "0.00 zł"}
                   </p>
                 </div>
                 <DollarSign className="size-10 text-emerald-600" />
@@ -1045,9 +1045,9 @@ export function AdminPanel() {
             <Card>
               <CardContent className="flex items-center justify-between p-5">
                 <div>
-                  <p className="text-sm text-slate-500">Suma sprzedaĹĽy</p>
+                  <p className="text-sm text-slate-500">Suma sprzedaży</p>
                   <p className="text-3xl font-semibold">
-                    {analytics ? formatMoney(analytics.summary.subtotal) : analyticsLoading ? "..." : "0.00 zĹ‚"}
+                    {analytics ? formatMoney(analytics.summary.subtotal) : analyticsLoading ? "..." : "0.00 zł"}
                   </p>
                 </div>
                 <TrendingUp className="size-10 text-blue-600" />
@@ -1056,9 +1056,9 @@ export function AdminPanel() {
             <Card>
               <CardContent className="flex items-center justify-between p-5">
                 <div>
-                  <p className="text-sm text-slate-500">ĹÄ…cznie z prowizjÄ…</p>
+                  <p className="text-sm text-slate-500">Łącznie z prowizją</p>
                   <p className="text-3xl font-semibold">
-                    {analytics ? formatMoney(analytics.summary.total) : analyticsLoading ? "..." : "0.00 zĹ‚"}
+                    {analytics ? formatMoney(analytics.summary.total) : analyticsLoading ? "..." : "0.00 zł"}
                   </p>
                 </div>
                 <CalendarRange className="size-10 text-violet-600" />
@@ -1077,18 +1077,18 @@ export function AdminPanel() {
             </Card>
           </div>
 
-          {analyticsLoading && <p className="text-gray-500">Ĺadowanie danych o prowizji...</p>}
+          {analyticsLoading && <p className="text-gray-500">Ładowanie danych o prowizji...</p>}
 
           {!analyticsLoading && analytics && (
             <div className="grid gap-4 xl:grid-cols-2">
               <Card className="border-slate-200">
                 <CardContent className="space-y-4 p-5">
-                  <h3 className="text-lg font-semibold">DochĂłd wedĹ‚ug uĹĽytkownikĂłw</h3>
+                  <h3 className="text-lg font-semibold">Dochód według użytkowników</h3>
                   <div className="overflow-hidden rounded-2xl border border-slate-200">
                     <table className="min-w-full divide-y divide-slate-200 text-sm">
                       <thead className="bg-slate-50 text-left text-slate-600">
                         <tr>
-                          <th className="px-4 py-3 font-medium">UĹĽytkownik</th>
+                          <th className="px-4 py-3 font-medium">Użytkownik</th>
                           <th className="px-4 py-3 font-medium">Prowizja</th>
                           <th className="px-4 py-3 font-medium">Zakupy</th>
                         </tr>
@@ -1105,7 +1105,7 @@ export function AdminPanel() {
                         ) : (
                           <tr>
                             <td className="px-4 py-4 text-slate-500" colSpan={3}>
-                              Brak danych dla wybranych filtrĂłw.
+                              Brak danych dla wybranych filtrów.
                             </td>
                           </tr>
                         )}
@@ -1117,7 +1117,7 @@ export function AdminPanel() {
 
               <Card className="border-slate-200">
                 <CardContent className="space-y-4 p-5">
-                  <h3 className="text-lg font-semibold">DochĂłd wedĹ‚ug kategorii</h3>
+                  <h3 className="text-lg font-semibold">Dochód według kategorii</h3>
                   <div className="overflow-hidden rounded-2xl border border-slate-200">
                     <table className="min-w-full divide-y divide-slate-200 text-sm">
                       <thead className="bg-slate-50 text-left text-slate-600">
@@ -1139,7 +1139,7 @@ export function AdminPanel() {
                         ) : (
                           <tr>
                             <td className="px-4 py-4 text-slate-500" colSpan={3}>
-                              Brak danych dla wybranych filtrĂłw.
+                              Brak danych dla wybranych filtrów.
                             </td>
                           </tr>
                         )}
@@ -1159,7 +1159,7 @@ export function AdminPanel() {
                   <table className="min-w-full divide-y divide-slate-200 text-sm">
                     <thead className="bg-slate-50 text-left text-slate-600">
                       <tr>
-                        <th className="px-4 py-3 font-medium">UĹĽytkownik</th>
+                        <th className="px-4 py-3 font-medium">Użytkownik</th>
                         <th className="px-4 py-3 font-medium">Wydarzenie</th>
                         <th className="px-4 py-3 font-medium">Kategoria</th>
                         <th className="px-4 py-3 font-medium">Zakup</th>
@@ -1183,7 +1183,7 @@ export function AdminPanel() {
                       ) : (
                         <tr>
                           <td className="px-4 py-4 text-slate-500" colSpan={5}>
-                            Brak transakcji dla wybranych filtrĂłw.
+                            Brak transakcji dla wybranych filtrów.
                           </td>
                         </tr>
                       )}
@@ -1442,14 +1442,14 @@ export function AdminPanel() {
                   </p>
                 </div>
                 <Button type="button" variant="outline" onClick={() => void loadUserReviews()}>
-                  OdĹ›wieĹĽ dane
+                  Odśwież dane
                 </Button>
               </div>
 
               <form onSubmit={handleUserReviewsSubmit} className="grid gap-3 md:grid-cols-4">
                 <div className="md:col-span-2">
                   <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="userReviewsSearch">
-                    Szukaj uĹĽytkownika
+                    Szukaj użytkownika
                   </label>
                   <div className="relative">
                     <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
@@ -1459,14 +1459,14 @@ export function AdminPanel() {
                       onChange={(e) =>
                         setUserReviewsFilters((prev) => ({ ...prev, search: e.target.value }))
                       }
-                      placeholder="Wpisz nazwÄ™ uĹĽytkownika"
+                      placeholder="Wpisz nazwę użytkownika"
                       className="w-full rounded-md border border-slate-300 bg-white py-2 pl-10 pr-3 text-sm"
                     />
                   </div>
                 </div>
                 <div>
                   <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="userReviewsMin">
-                    Ĺšrednia od
+                    Średnia od
                   </label>
                   <input
                     id="userReviewsMin"
@@ -1483,7 +1483,7 @@ export function AdminPanel() {
                 </div>
                 <div>
                   <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="userReviewsMax">
-                    Ĺšrednia do
+                    Średnia do
                   </label>
                   <input
                     id="userReviewsMax"
@@ -1529,7 +1529,7 @@ export function AdminPanel() {
                 <div className="flex flex-wrap gap-2 md:col-span-4">
                   <Button type="submit">Filtruj</Button>
                   <Button type="button" variant="outline" onClick={clearUserReviewsFilters}>
-                    WyczyĹ›Ä‡ filtry
+                    Wyczyść filtry
                   </Button>
                 </div>
               </form>
@@ -1546,7 +1546,7 @@ export function AdminPanel() {
             <Card>
               <CardContent className="flex items-center justify-between p-5">
                 <div>
-                  <p className="text-sm text-slate-500">Ĺšrednia ocena</p>
+                  <p className="text-sm text-slate-500">Średnia ocena</p>
                   <p className="text-3xl font-semibold">
                     {userReviews ? `${userReviews.summary.averageRating.toFixed(2)} / 5` : userReviewsLoading ? "..." : "0.00 / 5"}
                   </p>
@@ -1557,7 +1557,7 @@ export function AdminPanel() {
             <Card>
               <CardContent className="flex items-center justify-between p-5">
                 <div>
-                  <p className="text-sm text-slate-500">UĹĽytkownicy</p>
+                  <p className="text-sm text-slate-500">Użytkownicy</p>
                   <p className="text-3xl font-semibold">
                     {userReviews ? userReviews.summary.usersCount : userReviewsLoading ? "..." : "0"}
                   </p>
@@ -1589,7 +1589,7 @@ export function AdminPanel() {
             </Card>
           </div>
 
-          {userReviewsLoading && <p className="text-gray-500">Ĺadowanie opinii uĹĽytkownikĂłw...</p>}
+          {userReviewsLoading && <p className="text-gray-500">Ładowanie opinii użytkowników...</p>}
 
           {!userReviewsLoading && userReviews && (
             <div className="grid gap-4">
@@ -1604,11 +1604,11 @@ export function AdminPanel() {
                             <Badge variant="outline">{renderStars(entry.averageRating)}</Badge>
                           </div>
                           <p className="text-sm text-slate-500">
-                            Ĺšrednia: {entry.averageRating.toFixed(2)} / 5 | Oceny: {entry.ratingsCount} | Opinie:{" "}
+                            Średnia: {entry.averageRating.toFixed(2)} / 5 | Oceny: {entry.ratingsCount} | Opinie:{" "}
                             {entry.reviewsCount}
                           </p>
                           <p className="text-sm text-slate-500">
-                            Zakres aktywnoĹ›ci:{" "}
+                            Zakres aktywności:{" "}
                             {entry.firstRatedAt ? formatDate(entry.firstRatedAt) : "Brak danych"} -{" "}
                             {entry.lastRatedAt ? formatDate(entry.lastRatedAt) : "Brak danych"}
                           </p>
@@ -1645,11 +1645,11 @@ export function AdminPanel() {
                       <div className="rounded-2xl border border-slate-200 bg-white p-4">
                         <div className="flex flex-wrap items-center justify-between gap-3">
                           <div>
-                            <p className="text-sm font-semibold text-slate-900">Banowanie uĹĽytkownika</p>
+                            <p className="text-sm font-semibold text-slate-900">Banowanie użytkownika</p>
                             <p className="text-xs text-slate-500">
                               {entry.isBanned
                                 ? "Konto jest zablokowane."
-                                : "Ustaw datÄ™ koĹ„ca bana i krĂłtki opis."}
+                                : "Ustaw datę końca bana i krótki opis."}
                             </p>
                           </div>
                           {entry.isBanned ? (
@@ -1675,7 +1675,7 @@ export function AdminPanel() {
                                 </span>
                               </p>
                               <p className="text-xs text-slate-500">
-                                NaĹ‚oĹĽono: {entry.bannedAt ? formatDate(entry.bannedAt) : "Brak danych"}
+                                Nałożono: {entry.bannedAt ? formatDate(entry.bannedAt) : "Brak danych"}
                               </p>
                             </div>
                             <div className="flex items-end">
@@ -1724,7 +1724,7 @@ export function AdminPanel() {
                                 }
                                 rows={3}
                                 className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
-                                placeholder="KrĂłtko opisz powĂłd blokady"
+                                placeholder="Krótko opisz powód blokady"
                               />
                             </div>
                             <div className="md:col-span-3 flex justify-end">
@@ -1739,7 +1739,7 @@ export function AdminPanel() {
                                   )
                                 }
                               >
-                                Zbanuj uĹĽytkownika
+                                Zbanuj użytkownika
                               </Button>
                             </div>
                           </div>
@@ -1750,7 +1750,7 @@ export function AdminPanel() {
                 ))
               ) : (
                 <Card>
-                  <CardContent className="p-6 text-gray-600">Brak uĹĽytkownikĂłw dla wybranych filtrĂłw.</CardContent>
+                  <CardContent className="p-6 text-gray-600">Brak użytkowników dla wybranych filtrów.</CardContent>
                 </Card>
               )}
             </div>
@@ -1764,7 +1764,7 @@ export function AdminPanel() {
                 <div>
                   <h2 className="text-lg font-semibold">Wyszukiwanie i sortowanie</h2>
                   <p className="text-sm text-slate-600">
-                    Szukaj po tytule, kategorii, autorze, lokalizacji, dacie i liczbach biletĂłw.
+                    Szukaj po tytule, kategorii, autorze, lokalizacji, dacie i liczbach biletów.
                   </p>
                 </div>
                 <p className="text-sm text-slate-600">
@@ -1775,7 +1775,7 @@ export function AdminPanel() {
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                 <div className="md:col-span-2 xl:col-span-2">
                   <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="eventSearch">
-                    Szukaj wydarzeĹ„
+                    Szukaj wydarzeń
                   </label>
                   <div className="relative">
                     <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
@@ -1783,14 +1783,14 @@ export function AdminPanel() {
                       id="eventSearch"
                       value={eventSearch}
                       onChange={(e) => setEventSearch(e.target.value)}
-                      placeholder="TytuĹ‚, kategoria, lokalizacja, autor, data, ceny..."
+                      placeholder="Tytuł, kategoria, lokalizacja, autor, data, ceny..."
                       className="w-full rounded-md border border-slate-300 bg-white py-2 pl-10 pr-3 text-sm"
                     />
                   </div>
                 </div>
                 <div>
                   <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="eventSortBy">
-                    Sortuj wedĹ‚ug
+                    Sortuj według
                   </label>
                   <select
                     id="eventSortBy"
@@ -1799,13 +1799,13 @@ export function AdminPanel() {
                     className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
                   >
                     <option value="date">Daty wydarzenia</option>
-                    <option value="title">TytuĹ‚u</option>
+                    <option value="title">Tytułu</option>
                     <option value="category">Kategorii</option>
                     <option value="creator">Autora</option>
                     <option value="location">Lokalizacji</option>
                     <option value="price">Ceny biletu</option>
-                    <option value="available">DostÄ™pnych biletĂłw</option>
-                    <option value="sold">Sprzedanych biletĂłw</option>
+                    <option value="available">Dostępnych biletów</option>
+                    <option value="sold">Sprzedanych biletów</option>
                     <option value="createdAt">Daty utworzenia</option>
                   </select>
                 </div>
@@ -1819,15 +1819,15 @@ export function AdminPanel() {
                     onChange={(e) => setEventSortDirection(e.target.value as "asc" | "desc")}
                     className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
                   >
-                    <option value="asc">RosnÄ…co</option>
-                    <option value="desc">MalejÄ…co</option>
+                    <option value="asc">Rosnąco</option>
+                    <option value="desc">Malejąco</option>
                   </select>
                 </div>
               </div>
 
               <div className="flex flex-wrap gap-2">
                 <Button type="button" variant="outline" onClick={() => setEventSearch("")}>
-                  WyczyĹ›Ä‡ wyszukiwanie
+                  Wyczyść wyszukiwanie
                 </Button>
                 <Button
                   type="button"
@@ -1849,7 +1849,7 @@ export function AdminPanel() {
                 <div>
                   <h2 className="text-lg font-semibold">Akcje zbiorcze</h2>
                   <p className="text-sm text-slate-600">
-                    Zaznacz wydarzenia i wykonaj operacjÄ™ na wielu pozycjach jednoczeĹ›nie.
+                    Zaznacz wydarzenia i wykonaj operację na wielu pozycjach jednocześnie.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -1862,7 +1862,7 @@ export function AdminPanel() {
                     Zaznacz wszystko
                   </Button>
                   <Button type="button" variant="outline" onClick={clearSelection} disabled={selectedEventIds.size === 0}>
-                    WyczyĹ›Ä‡ zaznaczenie
+                    Wyczyść zaznaczenie
                   </Button>
                 </div>
               </div>
@@ -1870,7 +1870,7 @@ export function AdminPanel() {
               <div className="flex flex-wrap items-end gap-3">
                 <div className="min-w-64 flex-1">
                   <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="bulkCategory">
-                    PrzenieĹ› do kategorii
+                    Przenieś do kategorii
                   </label>
                   <select
                     id="bulkCategory"
@@ -1878,7 +1878,7 @@ export function AdminPanel() {
                     onChange={(e) => setBulkCategory(e.target.value)}
                     className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
                   >
-                    <option value="">Wybierz kategoriÄ™</option>
+                    <option value="">Wybierz kategorię</option>
                     {categories.map((category) => (
                       <option key={category} value={category}>
                         {category}
@@ -1891,7 +1891,7 @@ export function AdminPanel() {
                   onClick={handleBulkMove}
                   disabled={visibleSelectedEvents.length === 0 || bulkActionLoading === "move"}
                 >
-                  {bulkActionLoading === "move" ? "Przenoszenie..." : "PrzenieĹ› zaznaczone"}
+                  {bulkActionLoading === "move" ? "Przenoszenie..." : "Przenieś zaznaczone"}
                 </Button>
                 <Button
                   type="button"
@@ -1899,7 +1899,7 @@ export function AdminPanel() {
                   onClick={handleBulkDelete}
                   disabled={visibleSelectedEvents.length === 0 || bulkActionLoading === "delete"}
                 >
-                  {bulkActionLoading === "delete" ? "Usuwanie..." : "UsuĹ„ zaznaczone"}
+                  {bulkActionLoading === "delete" ? "Usuwanie..." : "Usuń zaznaczone"}
                 </Button>
               </div>
 
@@ -1909,11 +1909,11 @@ export function AdminPanel() {
             </CardContent>
           </Card>
 
-          {loadingData && <p className="text-gray-500">Ĺadowanie wydarzeĹ„...</p>}
+          {loadingData && <p className="text-gray-500">Ładowanie wydarzeń...</p>}
 
           {!loadingData && filteredSortedEvents.length === 0 && (
             <Card>
-              <CardContent className="p-6 text-gray-600">Brak wydarzeĹ„ do wyĹ›wietlenia.</CardContent>
+              <CardContent className="p-6 text-gray-600">Brak wydarzeń do wyświetlenia.</CardContent>
             </Card>
           )}
 
@@ -1962,7 +1962,7 @@ export function AdminPanel() {
                         onClick={() => handleDeleteEvent(eventId)}
                       >
                         <Trash2 className="mr-2 size-4" />
-                        {deletingEventId === eventId ? "Usuwanie..." : "UsuĹ„"}
+                        {deletingEventId === eventId ? "Usuwanie..." : "Usuń"}
                       </Button>
                     </div>
                   </CardContent>
