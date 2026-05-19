@@ -98,6 +98,16 @@ function normalizeDateFilter(input: unknown) {
   return /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
 }
 
+function parseNumberFilter(input: unknown) {
+  const raw = String(input ?? "").trim();
+  if (!raw) {
+    return null;
+  }
+
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : null;
+}
+
 export default async function handler(req: any, res: any) {
   if (req.method === "GET" && String(req.query?.reports) === "1") {
     try {
@@ -429,6 +439,240 @@ export default async function handler(req: any, res: any) {
     } catch (error: any) {
       console.error("EVENT ANALYTICS GET ERROR:", error);
       return res.status(500).json({ error: error.message ?? "Analytics fetch failed" });
+    }
+  }
+
+  if (req.method === "GET" && String(req.query?.userReviews) === "1") {
+    try {
+      const authUser = await authenticateRequest(req);
+      if (!authUser) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      if (!authUser.is_admin) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+
+      await ensureEventRatingsTable();
+      const userJoinColumn = await getUsersJoinColumn();
+      const searchFilter = String(req.query?.search ?? "").trim() || null;
+      const fromDate = normalizeDateFilter(req.query?.from);
+      const toDate = normalizeDateFilter(req.query?.to);
+      const minAverage = parseNumberFilter(req.query?.minAverage);
+      const maxAverage = parseNumberFilter(req.query?.maxAverage);
+
+      const rows =
+        userJoinColumn === "user_id"
+          ? await sql`
+              SELECT
+                er.id,
+                er.user_id,
+                er.event_id,
+                er.rating,
+                er.review_text,
+                er.created_at,
+                er.updated_at,
+                u.username,
+                e.title AS event_title,
+                e.date AS event_date,
+                COALESCE(c.name, 'Bez kategorii') AS category_name
+              FROM event_ratings er
+              LEFT JOIN users u ON u.user_id = er.user_id
+              LEFT JOIN events e ON e.id = er.event_id
+              LEFT JOIN categories c ON c.id = e.category_id
+              WHERE (${searchFilter}::text IS NULL OR LOWER(COALESCE(u.username, '')) LIKE LOWER('%' || ${searchFilter} || '%'))
+                AND (${fromDate}::date IS NULL OR er.created_at >= ${fromDate}::date)
+                AND (${toDate}::date IS NULL OR er.created_at < (${toDate}::date + INTERVAL '1 day'))
+              ORDER BY er.created_at DESC, er.id DESC
+            `
+          : userJoinColumn === "id"
+            ? await sql`
+                SELECT
+                  er.id,
+                  er.user_id,
+                  er.event_id,
+                  er.rating,
+                  er.review_text,
+                  er.created_at,
+                  er.updated_at,
+                  u.username,
+                  e.title AS event_title,
+                  e.date AS event_date,
+                  COALESCE(c.name, 'Bez kategorii') AS category_name
+                FROM event_ratings er
+                LEFT JOIN users u ON u.id = er.user_id
+                LEFT JOIN events e ON e.id = er.event_id
+                LEFT JOIN categories c ON c.id = e.category_id
+                WHERE (${searchFilter}::text IS NULL OR LOWER(COALESCE(u.username, '')) LIKE LOWER('%' || ${searchFilter} || '%'))
+                  AND (${fromDate}::date IS NULL OR er.created_at >= ${fromDate}::date)
+                  AND (${toDate}::date IS NULL OR er.created_at < (${toDate}::date + INTERVAL '1 day'))
+                ORDER BY er.created_at DESC, er.id DESC
+              `
+            : await sql`
+                SELECT
+                  er.id,
+                  er.user_id,
+                  er.event_id,
+                  er.rating,
+                  er.review_text,
+                  er.created_at,
+                  er.updated_at,
+                  NULL::text AS username,
+                  e.title AS event_title,
+                  e.date AS event_date,
+                  COALESCE(c.name, 'Bez kategorii') AS category_name
+                FROM event_ratings er
+                LEFT JOIN events e ON e.id = er.event_id
+                LEFT JOIN categories c ON c.id = e.category_id
+                WHERE (${fromDate}::date IS NULL OR er.created_at >= ${fromDate}::date)
+                  AND (${toDate}::date IS NULL OR er.created_at < (${toDate}::date + INTERVAL '1 day'))
+                ORDER BY er.created_at DESC, er.id DESC
+              `;
+
+      const userMap = new Map<
+        number,
+        {
+          userId: number;
+          username: string;
+          averageRating: number;
+          ratingSum: number;
+          ratingsCount: number;
+          reviewsCount: number;
+          firstRatedAt: string | null;
+          lastRatedAt: string | null;
+          opinions: Array<{
+            id: number;
+            eventId: number;
+            eventTitle: string;
+            category: string;
+            rating: number;
+            reviewText: string;
+            createdAt: string;
+          }>;
+        }
+      >();
+
+      for (const row of rows) {
+        const userId = Number(row.user_id);
+        if (!Number.isFinite(userId) || userId <= 0) {
+          continue;
+        }
+
+        const current =
+          userMap.get(userId) ||
+          {
+            userId,
+            username: row.username ? String(row.username) : "Użytkownik",
+            averageRating: 0,
+            ratingSum: 0,
+            ratingsCount: 0,
+            reviewsCount: 0,
+            firstRatedAt: row.created_at ? String(row.created_at) : null,
+            lastRatedAt: row.created_at ? String(row.created_at) : null,
+            opinions: [],
+          };
+
+        current.ratingsCount += 1;
+        current.ratingSum += Number(row.rating);
+        current.firstRatedAt =
+          current.firstRatedAt && row.created_at
+            ? new Date(current.firstRatedAt).getTime() < new Date(String(row.created_at)).getTime()
+              ? current.firstRatedAt
+              : String(row.created_at)
+            : current.firstRatedAt || (row.created_at ? String(row.created_at) : null);
+        current.lastRatedAt =
+          current.lastRatedAt && row.created_at
+            ? new Date(current.lastRatedAt).getTime() > new Date(String(row.created_at)).getTime()
+              ? current.lastRatedAt
+              : String(row.created_at)
+            : current.lastRatedAt || (row.created_at ? String(row.created_at) : null);
+
+        const reviewText = String(row.review_text ?? "").trim();
+        if (reviewText) {
+          current.reviewsCount += 1;
+          current.opinions.push({
+            id: Number(row.id),
+            eventId: Number(row.event_id),
+            eventTitle: String(row.event_title ?? "Nieznane wydarzenie"),
+            category: String(row.category_name ?? "Bez kategorii"),
+            rating: Number(row.rating),
+            reviewText,
+            createdAt: String(row.created_at),
+          });
+        }
+
+        userMap.set(userId, current);
+      }
+
+      let users = [...userMap.values()].map((userEntry) => ({
+        userId: userEntry.userId,
+        username: userEntry.username,
+        averageRating:
+          userEntry.ratingsCount > 0 ? Number((userEntry.ratingSum / userEntry.ratingsCount).toFixed(2)) : 0,
+        ratingsCount: userEntry.ratingsCount,
+        reviewsCount: userEntry.reviewsCount,
+        firstRatedAt: userEntry.firstRatedAt,
+        lastRatedAt: userEntry.lastRatedAt,
+        opinions: userEntry.opinions.slice(0, 5),
+      }));
+
+      if (minAverage !== null) {
+        users = users.filter((userEntry) => userEntry.averageRating >= minAverage);
+      }
+
+      if (maxAverage !== null) {
+        users = users.filter((userEntry) => userEntry.averageRating <= maxAverage);
+      }
+
+      users.sort((a, b) => b.averageRating - a.averageRating || b.ratingsCount - a.ratingsCount);
+
+      const overallSummary: {
+        usersCount: number;
+        ratingsCount: number;
+        reviewsCount: number;
+        averageRatingTotal: number;
+        averageRating: number;
+      } = users.reduce(
+        (acc, userEntry) => {
+        acc.usersCount += 1;
+        acc.ratingsCount += userEntry.ratingsCount;
+        acc.reviewsCount += userEntry.reviewsCount;
+        acc.averageRatingTotal += userEntry.ratingSum;
+        return acc;
+      },
+        {
+          usersCount: 0,
+          ratingsCount: 0,
+          reviewsCount: 0,
+          averageRatingTotal: 0,
+          averageRating: 0,
+        }
+      );
+
+      overallSummary.averageRating =
+        overallSummary.ratingsCount > 0
+          ? Number((overallSummary.averageRatingTotal / overallSummary.ratingsCount).toFixed(2))
+          : 0;
+
+      return res.status(200).json({
+        summary: {
+          usersCount: overallSummary.usersCount,
+          ratingsCount: overallSummary.ratingsCount,
+          reviewsCount: overallSummary.reviewsCount,
+          averageRating: overallSummary.averageRating,
+        },
+        users,
+        filters: {
+          search: searchFilter,
+          from: fromDate,
+          to: toDate,
+          minAverage,
+          maxAverage,
+        },
+      });
+    } catch (error: any) {
+      console.error("USER REVIEWS GET ERROR:", error);
+      return res.status(500).json({ error: error.message ?? "User reviews fetch failed" });
     }
   }
 

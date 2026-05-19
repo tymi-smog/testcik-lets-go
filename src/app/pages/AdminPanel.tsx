@@ -97,6 +97,44 @@ type CommissionAnalyticsResponse = {
   };
 };
 
+type UserOpinion = {
+  id: number;
+  eventId: number;
+  eventTitle: string;
+  category: string;
+  rating: number;
+  reviewText: string;
+  createdAt: string;
+};
+
+type UserReviewsUser = {
+  userId: number;
+  username: string;
+  averageRating: number;
+  ratingsCount: number;
+  reviewsCount: number;
+  firstRatedAt: string | null;
+  lastRatedAt: string | null;
+  opinions: UserOpinion[];
+};
+
+type UserReviewsResponse = {
+  summary: {
+    usersCount: number;
+    ratingsCount: number;
+    reviewsCount: number;
+    averageRating: number;
+  };
+  users: UserReviewsUser[];
+  filters: {
+    search: string | null;
+    from: string | null;
+    to: string | null;
+    minAverage: number | null;
+    maxAverage: number | null;
+  };
+};
+
 const reasonLabels: Record<string, string> = {
   spam: "Spam",
   scam: "Oszustwo",
@@ -124,15 +162,23 @@ function formatMoney(amount: number) {
   return `${amount.toFixed(2)} zł`;
 }
 
+function renderStars(rating: number) {
+  const value = Math.max(0, Math.min(5, Math.round(rating)));
+  return "★★★★★".slice(0, value) + "☆☆☆☆☆".slice(0, 5 - value);
+}
+
 export function AdminPanel() {
   const { user, token, isLoading } = useAuth();
   const [reports, setReports] = useState<EventReport[]>([]);
   const [events, setEvents] = useState<AdminEvent[]>([]);
   const [analytics, setAnalytics] = useState<CommissionAnalyticsResponse | null>(null);
+  const [userReviews, setUserReviews] = useState<UserReviewsResponse | null>(null);
   const [loadingData, setLoadingData] = useState(true);
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
+  const [userReviewsLoading, setUserReviewsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [analyticsError, setAnalyticsError] = useState<string | null>(null);
+  const [userReviewsError, setUserReviewsError] = useState<string | null>(null);
   const [deletingEventId, setDeletingEventId] = useState<number | null>(null);
   const [selectedEventIds, setSelectedEventIds] = useState<Set<number>>(new Set());
   const [bulkCategory, setBulkCategory] = useState("");
@@ -147,6 +193,13 @@ export function AdminPanel() {
     category: "",
     from: "",
     to: "",
+  });
+  const [userReviewsFilters, setUserReviewsFilters] = useState({
+    search: "",
+    from: "",
+    to: "",
+    minAverage: "",
+    maxAverage: "",
   });
 
   const isAdmin = user?.is_admin === true;
@@ -299,6 +352,44 @@ export function AdminPanel() {
     }
   }
 
+  async function loadUserReviews(filters = userReviewsFilters) {
+    if (!token || !isAdmin) {
+      setUserReviews(null);
+      setUserReviewsLoading(false);
+      return;
+    }
+
+    try {
+      setUserReviewsLoading(true);
+      setUserReviewsError(null);
+
+      const params = new URLSearchParams({ userReviews: "1" });
+      if (filters.search.trim()) params.set("search", filters.search.trim());
+      if (filters.from.trim()) params.set("from", filters.from.trim());
+      if (filters.to.trim()) params.set("to", filters.to.trim());
+      if (filters.minAverage.trim()) params.set("minAverage", filters.minAverage.trim());
+      if (filters.maxAverage.trim()) params.set("maxAverage", filters.maxAverage.trim());
+
+      const response = await fetch(`/api/events?${params.toString()}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data?.error || "Nie udało się pobrać opinii użytkowników.");
+      }
+
+      setUserReviews(data as UserReviewsResponse);
+    } catch (err) {
+      setUserReviews(null);
+      setUserReviewsError(err instanceof Error ? err.message : "Wystąpił nieznany błąd.");
+    } finally {
+      setUserReviewsLoading(false);
+    }
+  }
+
   useEffect(() => {
     let mounted = true;
 
@@ -354,6 +445,7 @@ export function AdminPanel() {
 
     loadData();
     void loadAnalytics();
+    void loadUserReviews();
 
     return () => {
       mounted = false;
@@ -487,6 +579,23 @@ export function AdminPanel() {
     void loadAnalytics(nextFilters);
   }
 
+  async function handleUserReviewsSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await loadUserReviews(userReviewsFilters);
+  }
+
+  function clearUserReviewsFilters() {
+    const nextFilters = {
+      search: "",
+      from: "",
+      to: "",
+      minAverage: "",
+      maxAverage: "",
+    };
+    setUserReviewsFilters(nextFilters);
+    void loadUserReviews(nextFilters);
+  }
+
   function toggleSelected(eventId: number) {
     setSelectedEventIds((prev) => {
       const next = new Set(prev);
@@ -591,9 +700,10 @@ export function AdminPanel() {
       </div>
 
       <Tabs defaultValue="reports" className="space-y-6">
-        <TabsList className="grid w-full max-w-3xl grid-cols-3">
+        <TabsList className="grid w-full max-w-5xl grid-cols-4">
           <TabsTrigger value="reports">Zgłoszenia</TabsTrigger>
           <TabsTrigger value="commission">Dochód</TabsTrigger>
+          <TabsTrigger value="users">Użytkownicy i opinie</TabsTrigger>
           <TabsTrigger value="events">Wydarzenia</TabsTrigger>
         </TabsList>
 
@@ -935,6 +1045,228 @@ export function AdminPanel() {
                 </div>
               </CardContent>
             </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="users" className="space-y-4">
+          <Card className="border-slate-200">
+            <CardContent className="space-y-4 p-5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-semibold">Użytkownicy i opinie</h2>
+                  <p className="text-sm text-slate-600">
+                    Lista użytkowników z ich średnią oceną ze wszystkich wydarzeń oraz zapisanymi opiniami.
+                  </p>
+                </div>
+                <Button type="button" variant="outline" onClick={() => void loadUserReviews()}>
+                  Odśwież dane
+                </Button>
+              </div>
+
+              <form onSubmit={handleUserReviewsSubmit} className="grid gap-3 md:grid-cols-4">
+                <div className="md:col-span-2">
+                  <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="userReviewsSearch">
+                    Szukaj użytkownika
+                  </label>
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+                    <input
+                      id="userReviewsSearch"
+                      value={userReviewsFilters.search}
+                      onChange={(e) =>
+                        setUserReviewsFilters((prev) => ({ ...prev, search: e.target.value }))
+                      }
+                      placeholder="Wpisz nazwę użytkownika"
+                      className="w-full rounded-md border border-slate-300 bg-white py-2 pl-10 pr-3 text-sm"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="userReviewsMin">
+                    Średnia od
+                  </label>
+                  <input
+                    id="userReviewsMin"
+                    type="number"
+                    min="1"
+                    max="5"
+                    step="0.1"
+                    value={userReviewsFilters.minAverage}
+                    onChange={(e) =>
+                      setUserReviewsFilters((prev) => ({ ...prev, minAverage: e.target.value }))
+                    }
+                    className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="userReviewsMax">
+                    Średnia do
+                  </label>
+                  <input
+                    id="userReviewsMax"
+                    type="number"
+                    min="1"
+                    max="5"
+                    step="0.1"
+                    value={userReviewsFilters.maxAverage}
+                    onChange={(e) =>
+                      setUserReviewsFilters((prev) => ({ ...prev, maxAverage: e.target.value }))
+                    }
+                    className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="userReviewsFrom">
+                    Od
+                  </label>
+                  <input
+                    id="userReviewsFrom"
+                    type="date"
+                    value={userReviewsFilters.from}
+                    onChange={(e) =>
+                      setUserReviewsFilters((prev) => ({ ...prev, from: e.target.value }))
+                    }
+                    className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="userReviewsTo">
+                    Do
+                  </label>
+                  <input
+                    id="userReviewsTo"
+                    type="date"
+                    value={userReviewsFilters.to}
+                    onChange={(e) =>
+                      setUserReviewsFilters((prev) => ({ ...prev, to: e.target.value }))
+                    }
+                    className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                  />
+                </div>
+                <div className="flex flex-wrap gap-2 md:col-span-4">
+                  <Button type="submit">Filtruj</Button>
+                  <Button type="button" variant="outline" onClick={clearUserReviewsFilters}>
+                    Wyczyść filtry
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+
+          {userReviewsError && (
+            <Card className="border-red-200 bg-red-50">
+              <CardContent className="p-4 text-red-700">{userReviewsError}</CardContent>
+            </Card>
+          )}
+
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <Card>
+              <CardContent className="flex items-center justify-between p-5">
+                <div>
+                  <p className="text-sm text-slate-500">Średnia ocena</p>
+                  <p className="text-3xl font-semibold">
+                    {userReviews ? `${userReviews.summary.averageRating.toFixed(2)} / 5` : userReviewsLoading ? "..." : "0.00 / 5"}
+                  </p>
+                </div>
+                <Users className="size-10 text-indigo-600" />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="flex items-center justify-between p-5">
+                <div>
+                  <p className="text-sm text-slate-500">Użytkownicy</p>
+                  <p className="text-3xl font-semibold">
+                    {userReviews ? userReviews.summary.usersCount : userReviewsLoading ? "..." : "0"}
+                  </p>
+                </div>
+                <Users className="size-10 text-emerald-600" />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="flex items-center justify-between p-5">
+                <div>
+                  <p className="text-sm text-slate-500">Oceny</p>
+                  <p className="text-3xl font-semibold">
+                    {userReviews ? userReviews.summary.ratingsCount : userReviewsLoading ? "..." : "0"}
+                  </p>
+                </div>
+                <CalendarRange className="size-10 text-blue-600" />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="flex items-center justify-between p-5">
+                <div>
+                  <p className="text-sm text-slate-500">Opinie tekstowe</p>
+                  <p className="text-3xl font-semibold">
+                    {userReviews ? userReviews.summary.reviewsCount : userReviewsLoading ? "..." : "0"}
+                  </p>
+                </div>
+                <Flag className="size-10 text-amber-600" />
+              </CardContent>
+            </Card>
+          </div>
+
+          {userReviewsLoading && <p className="text-gray-500">Ładowanie opinii użytkowników...</p>}
+
+          {!userReviewsLoading && userReviews && (
+            <div className="grid gap-4">
+              {userReviews.users.length > 0 ? (
+                userReviews.users.map((entry) => (
+                  <Card key={entry.userId} className="border-slate-200">
+                    <CardContent className="space-y-4 p-5">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="space-y-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="text-xl font-semibold text-slate-900">{entry.username}</h3>
+                            <Badge variant="outline">{renderStars(entry.averageRating)}</Badge>
+                          </div>
+                          <p className="text-sm text-slate-500">
+                            Średnia: {entry.averageRating.toFixed(2)} / 5 | Oceny: {entry.ratingsCount} | Opinie:{" "}
+                            {entry.reviewsCount}
+                          </p>
+                          <p className="text-sm text-slate-500">
+                            Zakres aktywności:{" "}
+                            {entry.firstRatedAt ? formatDate(entry.firstRatedAt) : "Brak danych"} -{" "}
+                            {entry.lastRatedAt ? formatDate(entry.lastRatedAt) : "Brak danych"}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                        {entry.opinions.length > 0 ? (
+                          entry.opinions.map((opinion) => (
+                            <div
+                              key={opinion.id}
+                              className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                            >
+                              <div className="mb-2 flex items-center justify-between gap-2">
+                                <div>
+                                  <p className="font-medium text-slate-900">{opinion.eventTitle}</p>
+                                  <p className="text-xs text-slate-500">{opinion.category}</p>
+                                </div>
+                                <Badge variant="secondary">{opinion.rating} / 5</Badge>
+                              </div>
+                              <p className="text-sm text-slate-700">
+                                {opinion.reviewText || "Brak pisemnej opinii."}
+                              </p>
+                              <p className="mt-2 text-xs text-slate-500">{formatDate(opinion.createdAt)}</p>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-4 text-sm text-slate-500 md:col-span-2 xl:col-span-3">
+                            Brak opinii tekstowych dla wybranego zakresu.
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              ) : (
+                <Card>
+                  <CardContent className="p-6 text-gray-600">Brak użytkowników dla wybranych filtrów.</CardContent>
+                </Card>
+              )}
+            </div>
           )}
         </TabsContent>
 
