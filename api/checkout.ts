@@ -1,7 +1,7 @@
-import type { VercelRequest, VercelResponse } from "@vercel/node";
+﻿import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { sql } from "../lib/db.js";
 import { resend } from "../lib/resend.js";
-import { authenticateRequest } from "../lib/auth.js";
+import { authenticateRequest, rejectIfBannedUser } from "../lib/auth.js";
 import { ensureEventSalesColumns } from "../lib/event-sales.js";
 import { ensureTicketPurchasesTable } from "../lib/ticket-purchases.js";
 
@@ -27,6 +27,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const authUser = await authenticateRequest(req);
+      if (rejectIfBannedUser(authUser, res)) {
+        return;
+      }
   if (!authUser) {
     return res.status(401).json({ error: "Musisz być zalogowany." });
   }

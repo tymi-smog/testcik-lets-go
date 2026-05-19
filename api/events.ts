@@ -1,9 +1,10 @@
-import { sql } from "../lib/db.js";
-import { authenticateRequest } from "../lib/auth.js";
+﻿import { sql } from "../lib/db.js";
+import { authenticateRequest, rejectIfBannedUser } from "../lib/auth.js";
 import { ensureEventSalesColumns } from "../lib/event-sales.js";
 import { ensureTicketPurchasesTable } from "../lib/ticket-purchases.js";
 import { ensureEventRatingsTable } from "../lib/event-ratings.js";
 import { ensureEventReportsTable } from "../lib/event-reports.js";
+import { ensureUserBanColumns } from "../lib/user-bans.js";
 
 const VALID_REPORT_REASONS = new Set(["spam", "scam", "inappropriate", "duplicate", "other"]);
 const VALID_BULK_ACTIONS = new Set(["bulk-delete", "bulk-move-category"]);
@@ -112,6 +113,9 @@ export default async function handler(req: any, res: any) {
   if (req.method === "GET" && String(req.query?.reports) === "1") {
     try {
       const authUser = await authenticateRequest(req);
+      if (rejectIfBannedUser(authUser, res)) {
+        return;
+      }
       if (!authUser) {
         return res.status(401).json({ error: "Unauthorized" });
       }
@@ -233,6 +237,9 @@ export default async function handler(req: any, res: any) {
   if (req.method === "GET" && String(req.query?.analytics) === "1") {
     try {
       const authUser = await authenticateRequest(req);
+      if (rejectIfBannedUser(authUser, res)) {
+        return;
+      }
       if (!authUser) {
         return res.status(401).json({ error: "Unauthorized" });
       }
@@ -445,6 +452,9 @@ export default async function handler(req: any, res: any) {
   if (req.method === "GET" && String(req.query?.userReviews) === "1") {
     try {
       const authUser = await authenticateRequest(req);
+      if (rejectIfBannedUser(authUser, res)) {
+        return;
+      }
       if (!authUser) {
         return res.status(401).json({ error: "Unauthorized" });
       }
@@ -453,6 +463,7 @@ export default async function handler(req: any, res: any) {
         return res.status(403).json({ error: "Forbidden" });
       }
 
+      await ensureUserBanColumns();
       await ensureEventRatingsTable();
       const userJoinColumn = await getUsersJoinColumn();
       const searchFilter = String(req.query?.search ?? "").trim() || null;
@@ -473,6 +484,9 @@ export default async function handler(req: any, res: any) {
                 er.created_at,
                 er.updated_at,
                 u.username,
+                u.ban_until,
+                u.ban_reason,
+                u.banned_at,
                 e.title AS event_title,
                 e.date AS event_date,
                 COALESCE(c.name, 'Bez kategorii') AS category_name
@@ -496,6 +510,9 @@ export default async function handler(req: any, res: any) {
                   er.created_at,
                   er.updated_at,
                   u.username,
+                  u.ban_until,
+                  u.ban_reason,
+                  u.banned_at,
                   e.title AS event_title,
                   e.date AS event_date,
                   COALESCE(c.name, 'Bez kategorii') AS category_name
@@ -518,6 +535,9 @@ export default async function handler(req: any, res: any) {
                   er.created_at,
                   er.updated_at,
                   NULL::text AS username,
+                  NULL::timestamptz AS ban_until,
+                  NULL::text AS ban_reason,
+                  NULL::timestamptz AS banned_at,
                   e.title AS event_title,
                   e.date AS event_date,
                   COALESCE(c.name, 'Bez kategorii') AS category_name
@@ -534,6 +554,9 @@ export default async function handler(req: any, res: any) {
         {
           userId: number;
           username: string;
+          banUntil: string | null;
+          banReason: string | null;
+          bannedAt: string | null;
           averageRating: number;
           ratingSum: number;
           ratingsCount: number;
@@ -563,6 +586,9 @@ export default async function handler(req: any, res: any) {
           {
             userId,
             username: row.username ? String(row.username) : "Użytkownik",
+            banUntil: row.ban_until ? String(row.ban_until) : null,
+            banReason: row.ban_reason ? String(row.ban_reason) : null,
+            bannedAt: row.banned_at ? String(row.banned_at) : null,
             averageRating: 0,
             ratingSum: 0,
             ratingsCount: 0,
@@ -607,6 +633,10 @@ export default async function handler(req: any, res: any) {
       let users = [...userMap.values()].map((userEntry) => ({
         userId: userEntry.userId,
         username: userEntry.username,
+        banUntil: userEntry.banUntil,
+        banReason: userEntry.banReason,
+        bannedAt: userEntry.bannedAt,
+        isBanned: userEntry.banUntil ? Date.parse(userEntry.banUntil) > Date.now() : false,
         averageRating:
           userEntry.ratingsCount > 0 ? Number((userEntry.ratingSum / userEntry.ratingsCount).toFixed(2)) : 0,
         ratingsCount: userEntry.ratingsCount,
@@ -634,12 +664,12 @@ export default async function handler(req: any, res: any) {
         averageRating: number;
       } = users.reduce(
         (acc, userEntry) => {
-        acc.usersCount += 1;
-        acc.ratingsCount += userEntry.ratingsCount;
-        acc.reviewsCount += userEntry.reviewsCount;
-        acc.averageRatingTotal += userEntry.ratingSum;
-        return acc;
-      },
+          acc.usersCount += 1;
+          acc.ratingsCount += userEntry.ratingsCount;
+          acc.reviewsCount += userEntry.reviewsCount;
+          acc.averageRatingTotal += userEntry.averageRating * userEntry.ratingsCount;
+          return acc;
+        },
         {
           usersCount: 0,
           ratingsCount: 0,
@@ -676,8 +706,108 @@ export default async function handler(req: any, res: any) {
     }
   }
 
+  if (req.method === "POST" && ["ban-user", "unban-user"].includes(String(req.query?.action ?? ""))) {
+    try {
+      await ensureUserBanColumns();
+
+      const authUser = await authenticateRequest(req);
+      if (rejectIfBannedUser(authUser, res)) {
+        return;
+      }
+      if (!authUser) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      if (!authUser.is_admin) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+
+      const body = parseRequestBody(req.body);
+      const targetUserId = Number(body?.userId);
+      if (!Number.isFinite(targetUserId) || targetUserId <= 0) {
+        return res.status(400).json({ error: "Nieprawidłowy użytkownik." });
+      }
+
+      const userJoinColumn = await getUsersJoinColumn();
+      if (!userJoinColumn) {
+        return res.status(500).json({ error: "Nie udało się ustalić kolumny użytkownika." });
+      }
+
+      if (String(req.query?.action) === "unban-user") {
+        if (userJoinColumn === "user_id") {
+          await sql`
+            UPDATE users
+            SET ban_until = NULL,
+                ban_reason = NULL,
+                banned_at = NULL
+            WHERE user_id = ${targetUserId}
+          `;
+        } else {
+          await sql`
+            UPDATE users
+            SET ban_until = NULL,
+                ban_reason = NULL,
+                banned_at = NULL
+            WHERE id = ${targetUserId}
+          `;
+        }
+
+        return res.status(200).json({ success: true, banned: false, userId: targetUserId });
+      }
+
+      const banUntilRaw = String(body?.banUntil ?? "").trim();
+      const banReason = String(body?.banReason ?? "").trim();
+      const banUntilDate = new Date(banUntilRaw);
+      if (!banUntilRaw || Number.isNaN(banUntilDate.getTime())) {
+        return res.status(400).json({ error: "Podaj prawidłową datę końca bana." });
+      }
+
+      if (banUntilDate.getTime() <= Date.now()) {
+        return res.status(400).json({ error: "Data końca bana musi być w przyszłości." });
+      }
+
+      if (!banReason) {
+        return res.status(400).json({ error: "Dodaj opis bana." });
+      }
+
+      const banUntil = banUntilDate.toISOString();
+
+      if (userJoinColumn === "user_id") {
+        await sql`
+          UPDATE users
+          SET ban_until = ${banUntil},
+              ban_reason = ${banReason},
+              banned_at = NOW()
+          WHERE user_id = ${targetUserId}
+        `;
+      } else {
+        await sql`
+          UPDATE users
+          SET ban_until = ${banUntil},
+              ban_reason = ${banReason},
+              banned_at = NOW()
+          WHERE id = ${targetUserId}
+        `;
+      }
+
+      return res.status(200).json({
+        success: true,
+        banned: true,
+        userId: targetUserId,
+        banUntil,
+        banReason,
+      });
+    } catch (error: any) {
+      console.error("USER BAN ACTION ERROR:", error);
+      return res.status(500).json({ error: error.message ?? "Ban action failed" });
+    }
+  }
+
   if (req.method === "POST" && String(req.query?.report) === "1") {
     const authUser = await authenticateRequest(req);
+      if (rejectIfBannedUser(authUser, res)) {
+        return;
+      }
     if (!authUser) {
       return res.status(401).json({ error: "Musisz być zalogowany." });
     }
@@ -761,6 +891,9 @@ export default async function handler(req: any, res: any) {
       await ensureEventReportsTable();
 
       const authUser = await authenticateRequest(req);
+      if (rejectIfBannedUser(authUser, res)) {
+        return;
+      }
       if (!authUser) {
         return res.status(401).json({ error: "Unauthorized" });
       }
@@ -1165,6 +1298,9 @@ export default async function handler(req: any, res: any) {
     try {
       await ensureEventSalesColumns();
       const authUser = await authenticateRequest(req);
+      if (rejectIfBannedUser(authUser, res)) {
+        return;
+      }
       if (!authUser) {
         return res.status(401).json({ error: "Unauthorized" });
       }
@@ -1520,6 +1656,9 @@ export default async function handler(req: any, res: any) {
     try {
       await ensureEventSalesColumns();
       const authUser = await authenticateRequest(req);
+      if (rejectIfBannedUser(authUser, res)) {
+        return;
+      }
       if (!authUser) {
         return res.status(401).json({ error: "Unauthorized" });
       }
@@ -1765,6 +1904,9 @@ export default async function handler(req: any, res: any) {
       await ensureEventReportsTable();
 
       const authUser = await authenticateRequest(req);
+      if (rejectIfBannedUser(authUser, res)) {
+        return;
+      }
       if (!authUser) {
         return res.status(401).json({ error: "Unauthorized" });
       }

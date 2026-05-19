@@ -62,6 +62,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         email: user.email,
         is_verified: isVerified,
         is_admin: isAdmin,
+        is_banned: user.ban_until ? new Date(String(user.ban_until)).getTime() > Date.now() : false,
+        ban_until: user.ban_until ? String(user.ban_until) : null,
+        ban_reason: user.ban_reason ? String(user.ban_reason) : null,
+        banned_at: user.banned_at ? String(user.banned_at) : null,
       },
     });
   } catch (err) {

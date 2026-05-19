@@ -6,6 +6,10 @@ type User = {
   email: string;
   is_verified: boolean;
   is_admin?: boolean;
+  is_banned?: boolean;
+  ban_until?: string | null;
+  ban_reason?: string | null;
+  banned_at?: string | null;
 };
 
 type AuthContextType = {

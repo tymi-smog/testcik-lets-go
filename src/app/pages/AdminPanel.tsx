@@ -110,6 +110,10 @@ type UserOpinion = {
 type UserReviewsUser = {
   userId: number;
   username: string;
+  isBanned: boolean;
+  banUntil: string | null;
+  banReason: string | null;
+  bannedAt: string | null;
   averageRating: number;
   ratingsCount: number;
   reviewsCount: number;
@@ -201,6 +205,7 @@ export function AdminPanel() {
     minAverage: "",
     maxAverage: "",
   });
+  const [banDrafts, setBanDrafts] = useState<Record<number, { until: string; reason: string }>>({});
 
   const isAdmin = user?.is_admin === true;
   const categories = useMemo(() => {
@@ -387,6 +392,61 @@ export function AdminPanel() {
       setUserReviewsError(err instanceof Error ? err.message : "Wystąpił nieznany błąd.");
     } finally {
       setUserReviewsLoading(false);
+    }
+  }
+
+  async function handleBanUser(userId: number, until: string, reason: string) {
+    if (!token) return;
+
+    if (!until || !reason.trim()) {
+      toast.error("Podaj datę końca bana i opis.");
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/events?action=ban-user", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ userId, banUntil: until, banReason: reason.trim() }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data?.error || "Nie udało się zablokować użytkownika.");
+      }
+
+      toast.success("Użytkownik został zablokowany.");
+      void loadUserReviews();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Wystąpił nieznany błąd.");
+    }
+  }
+
+  async function handleUnbanUser(userId: number) {
+    if (!token) return;
+
+    try {
+      const response = await fetch("/api/events?action=unban-user", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ userId }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data?.error || "Nie udało się odblokować użytkownika.");
+      }
+
+      toast.success("Użytkownik został odblokowany.");
+      void loadUserReviews();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Wystąpił nieznany błąd.");
     }
   }
 
@@ -1255,6 +1315,110 @@ export function AdminPanel() {
                         ) : (
                           <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-4 text-sm text-slate-500 md:col-span-2 xl:col-span-3">
                             Brak opinii tekstowych dla wybranego zakresu.
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-semibold text-slate-900">Banowanie użytkownika</p>
+                            <p className="text-xs text-slate-500">
+                              {entry.isBanned
+                                ? "Konto jest zablokowane."
+                                : "Ustaw datę końca bana i krótki opis."}
+                            </p>
+                          </div>
+                          {entry.isBanned ? (
+                            <Badge variant="destructive">Zablokowany</Badge>
+                          ) : (
+                            <Badge variant="outline">Aktywny</Badge>
+                          )}
+                        </div>
+
+                        {entry.isBanned ? (
+                          <div className="mt-4 grid gap-3 md:grid-cols-3">
+                            <div className="md:col-span-2 space-y-2">
+                              <p className="text-sm text-slate-600">
+                                Do:{" "}
+                                <span className="font-medium text-slate-900">
+                                  {entry.banUntil ? formatDate(entry.banUntil) : "Brak daty"}
+                                </span>
+                              </p>
+                              <p className="text-sm text-slate-600">
+                                Opis:{" "}
+                                <span className="font-medium text-slate-900">
+                                  {entry.banReason || "Brak opisu"}
+                                </span>
+                              </p>
+                              <p className="text-xs text-slate-500">
+                                Nałożono: {entry.bannedAt ? formatDate(entry.bannedAt) : "Brak danych"}
+                              </p>
+                            </div>
+                            <div className="flex items-end">
+                              <Button type="button" variant="destructive" onClick={() => void handleUnbanUser(entry.userId)}>
+                                Odbanuj
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="mt-4 grid gap-3 md:grid-cols-3">
+                            <div>
+                              <label className="mb-1 block text-xs font-medium text-slate-700" htmlFor={`banUntil-${entry.userId}`}>
+                                Ban do
+                              </label>
+                              <input
+                                id={`banUntil-${entry.userId}`}
+                                type="datetime-local"
+                                value={banDrafts[entry.userId]?.until ?? ""}
+                                onChange={(e) =>
+                                  setBanDrafts((prev) => ({
+                                    ...prev,
+                                    [entry.userId]: {
+                                      until: e.target.value,
+                                      reason: prev[entry.userId]?.reason ?? "",
+                                    },
+                                  }))
+                                }
+                                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                              />
+                            </div>
+                            <div className="md:col-span-2">
+                              <label className="mb-1 block text-xs font-medium text-slate-700" htmlFor={`banReason-${entry.userId}`}>
+                                Opis bana
+                              </label>
+                              <textarea
+                                id={`banReason-${entry.userId}`}
+                                value={banDrafts[entry.userId]?.reason ?? ""}
+                                onChange={(e) =>
+                                  setBanDrafts((prev) => ({
+                                    ...prev,
+                                    [entry.userId]: {
+                                      until: prev[entry.userId]?.until ?? "",
+                                      reason: e.target.value,
+                                    },
+                                  }))
+                                }
+                                rows={3}
+                                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                                placeholder="Krótko opisz powód blokady"
+                              />
+                            </div>
+                            <div className="md:col-span-3 flex justify-end">
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                onClick={() =>
+                                  void handleBanUser(
+                                    entry.userId,
+                                    banDrafts[entry.userId]?.until ?? "",
+                                    banDrafts[entry.userId]?.reason ?? ""
+                                  )
+                                }
+                              >
+                                Zbanuj użytkownika
+                              </Button>
+                            </div>
                           </div>
                         )}
                       </div>

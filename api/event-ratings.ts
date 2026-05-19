@@ -1,6 +1,6 @@
-import type { VercelRequest, VercelResponse } from "@vercel/node";
+﻿import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { sql } from "../lib/db.js";
-import { authenticateRequest } from "../lib/auth.js";
+import { authenticateRequest, rejectIfBannedUser } from "../lib/auth.js";
 import { ensureEventRatingsTable } from "../lib/event-ratings.js";
 import { ensureTicketPurchasesTable } from "../lib/ticket-purchases.js";
 
@@ -21,6 +21,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const eventId = Number(req.query?.eventId);
       const authUser = await authenticateRequest(req);
+      if (rejectIfBannedUser(authUser, res)) {
+        return;
+      }
       const userColumns = await sql`
         SELECT column_name
         FROM information_schema.columns
@@ -160,6 +163,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (req.method === "POST") {
     const authUser = await authenticateRequest(req);
+      if (rejectIfBannedUser(authUser, res)) {
+        return;
+      }
     if (!authUser) {
       return res.status(401).json({ error: "Musisz być zalogowany." });
     }

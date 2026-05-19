@@ -9,10 +9,14 @@ export async function requireAdmin(req: any) {
   const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
 
   const users = await sql`
-    SELECT is_admin FROM users WHERE id = ${decoded.user_id}
+    SELECT is_admin, ban_until FROM users WHERE id = ${decoded.user_id}
   `;
 
   if (!users[0] || !users[0].is_admin) {
+    throw new Error("Forbidden");
+  }
+
+  if (users[0].ban_until && new Date(users[0].ban_until).getTime() > Date.now()) {
     throw new Error("Forbidden");
   }
 
