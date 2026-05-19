@@ -338,7 +338,7 @@ export default async function handler(req: any, res: any) {
         };
       });
 
-      const summary = items.reduce(
+      const summary: CommissionAnalyticsSummary = items.reduce(
         (acc, item) => {
           acc.subtotal += item.lineTotal;
           acc.commission += item.commission;
@@ -348,6 +348,7 @@ export default async function handler(req: any, res: any) {
         {
           subtotal: 0,
           commission: 0,
+          total: 0,
           purchasesCount: 0,
         }
       );

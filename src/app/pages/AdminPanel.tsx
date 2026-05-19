@@ -29,6 +29,9 @@ type AdminEvent = {
   creator_username?: string | null;
   city?: string | null;
   venue?: string | null;
+  ticket_price?: number | string | null;
+  available_tickets?: number | string | null;
+  sold_tickets?: number | string | null;
 };
 
 type EventReport = {
@@ -134,6 +137,11 @@ export function AdminPanel() {
   const [selectedEventIds, setSelectedEventIds] = useState<Set<number>>(new Set());
   const [bulkCategory, setBulkCategory] = useState("");
   const [bulkActionLoading, setBulkActionLoading] = useState<null | "delete" | "move">(null);
+  const [eventSearch, setEventSearch] = useState("");
+  const [eventSortBy, setEventSortBy] = useState<
+    "date" | "title" | "category" | "creator" | "location" | "price" | "available" | "sold" | "createdAt"
+  >("date");
+  const [eventSortDirection, setEventSortDirection] = useState<"asc" | "desc">("asc");
   const [commissionFilters, setCommissionFilters] = useState({
     user: "",
     category: "",
@@ -149,12 +157,110 @@ export function AdminPanel() {
     return unique.length > 0 ? unique : ["Inne"];
   }, [events]);
 
-  const selectedEvents = useMemo(
-    () => events.filter((event) => selectedEventIds.has(Number(event.id))),
-    [events, selectedEventIds]
+  const openReports = useMemo(() => reports.filter((report) => report.status === "open"), [reports]);
+
+  function normalizeSearchValue(value: string) {
+    return value
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLocaleLowerCase("pl");
+  }
+
+  const filteredSortedEvents = useMemo(() => {
+    const query = normalizeSearchValue(eventSearch.trim());
+
+    const filtered = events.filter((event) => {
+      if (!query) return true;
+
+      const searchable = [
+        event.title,
+        event.category || "Inne",
+        event.creator_username || "Nieznany",
+        event.city || "",
+        event.venue || "",
+        formatLocation(event.city, event.venue),
+        event.date || "",
+        event.created_at || "",
+        String(event.ticket_price ?? ""),
+        String(event.available_tickets ?? ""),
+        String(event.sold_tickets ?? ""),
+      ]
+        .join(" ")
+        .toLocaleLowerCase("pl");
+
+      return normalizeSearchValue(searchable).includes(query);
+    });
+
+    const sorted = [...filtered].sort((a, b) => {
+      const direction = eventSortDirection === "asc" ? 1 : -1;
+
+      const aValue = (() => {
+        switch (eventSortBy) {
+          case "title":
+            return a.title || "";
+          case "category":
+            return a.category || "Inne";
+          case "creator":
+            return a.creator_username || "";
+          case "location":
+            return formatLocation(a.city, a.venue);
+          case "price":
+            return Number(a.ticket_price ?? 0);
+          case "available":
+            return Number(a.available_tickets ?? 0);
+          case "sold":
+            return Number(a.sold_tickets ?? 0);
+          case "createdAt":
+            return a.created_at ? Date.parse(a.created_at) : 0;
+          case "date":
+          default:
+            return Date.parse(a.date);
+        }
+      })();
+
+      const bValue = (() => {
+        switch (eventSortBy) {
+          case "title":
+            return b.title || "";
+          case "category":
+            return b.category || "Inne";
+          case "creator":
+            return b.creator_username || "";
+          case "location":
+            return formatLocation(b.city, b.venue);
+          case "price":
+            return Number(b.ticket_price ?? 0);
+          case "available":
+            return Number(b.available_tickets ?? 0);
+          case "sold":
+            return Number(b.sold_tickets ?? 0);
+          case "createdAt":
+            return b.created_at ? Date.parse(b.created_at) : 0;
+          case "date":
+          default:
+            return Date.parse(b.date);
+        }
+      })();
+
+      if (typeof aValue === "number" && typeof bValue === "number") {
+        return (aValue - bValue) * direction;
+      }
+
+      return String(aValue).localeCompare(String(bValue), "pl") * direction;
+    });
+
+    return sorted;
+  }, [events, eventSearch, eventSortBy, eventSortDirection]);
+
+  const visibleSelectedEventIds = useMemo(
+    () => new Set(filteredSortedEvents.filter((event) => selectedEventIds.has(Number(event.id))).map((event) => Number(event.id))),
+    [filteredSortedEvents, selectedEventIds]
   );
 
-  const openReports = useMemo(() => reports.filter((report) => report.status === "open"), [reports]);
+  const visibleSelectedEvents = useMemo(
+    () => filteredSortedEvents.filter((event) => visibleSelectedEventIds.has(Number(event.id))),
+    [filteredSortedEvents, visibleSelectedEventIds]
+  );
 
   async function loadAnalytics(filters = commissionFilters) {
     if (!token || !isAdmin) {
@@ -292,10 +398,10 @@ export function AdminPanel() {
   }
 
   async function handleBulkDelete() {
-    if (!token || selectedEvents.length === 0) return;
+    if (!token || visibleSelectedEvents.length === 0) return;
 
     const confirmed = window.confirm(
-      `Czy na pewno chcesz usunąć ${selectedEvents.length} wydarzeń?`
+      `Czy na pewno chcesz usunąć ${visibleSelectedEvents.length} wydarzeń?`
     );
     if (!confirmed) return;
 
@@ -307,7 +413,7 @@ export function AdminPanel() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ ids: [...selectedEventIds] }),
+        body: JSON.stringify({ ids: [...visibleSelectedEventIds] }),
       });
 
       const data = await response.json().catch(() => ({}));
@@ -316,8 +422,8 @@ export function AdminPanel() {
       }
 
       toast.success("Wydarzenia zostały usunięte.");
-      setEvents((prev) => prev.filter((event) => !selectedEventIds.has(Number(event.id))));
-      setReports((prev) => prev.filter((report) => !selectedEventIds.has(report.eventId)));
+      setEvents((prev) => prev.filter((event) => !visibleSelectedEventIds.has(Number(event.id))));
+      setReports((prev) => prev.filter((report) => !visibleSelectedEventIds.has(report.eventId)));
       setSelectedEventIds(new Set());
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Wystąpił nieznany błąd.");
@@ -327,7 +433,7 @@ export function AdminPanel() {
   }
 
   async function handleBulkMove() {
-    if (!token || selectedEvents.length === 0) return;
+    if (!token || visibleSelectedEvents.length === 0) return;
 
     const category = bulkCategory.trim();
     if (!category) {
@@ -343,7 +449,7 @@ export function AdminPanel() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ ids: [...selectedEventIds], category }),
+        body: JSON.stringify({ ids: [...visibleSelectedEventIds], category }),
       });
 
       const data = await response.json().catch(() => ({}));
@@ -354,7 +460,7 @@ export function AdminPanel() {
       toast.success("Wydarzenia zostały przeniesione do nowej kategorii.");
       setEvents((prev) =>
         prev.map((event) =>
-          selectedEventIds.has(Number(event.id)) ? { ...event, category } : event
+          visibleSelectedEventIds.has(Number(event.id)) ? { ...event, category } : event
         )
       );
       setSelectedEventIds(new Set());
@@ -394,7 +500,7 @@ export function AdminPanel() {
   }
 
   function selectAllVisible() {
-    setSelectedEventIds(new Set(events.map((event) => Number(event.id))));
+    setSelectedEventIds(new Set(filteredSortedEvents.map((event) => Number(event.id))));
   }
 
   function clearSelection() {
@@ -434,15 +540,15 @@ export function AdminPanel() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
-      <div className="mb-8 rounded-3xl border border-slate-200 bg-gradient-to-r from-slate-950 via-slate-900 to-emerald-900 p-8 text-white shadow-xl">
+      <div className="mb-8 rounded-3xl border border-slate-200 bg-slate-100 p-8 text-slate-900 shadow-sm">
         <div className="flex items-center gap-3">
-          <ShieldAlert className="size-8 text-emerald-300" />
+          <ShieldAlert className="size-8 text-emerald-700" />
           <div>
-            <p className="text-sm uppercase tracking-[0.2em] text-emerald-200/80">Admin panel</p>
+            <p className="text-sm uppercase tracking-[0.2em] text-emerald-700/80">Admin panel</p>
             <h1 className="text-4xl font-semibold">Panel administratora</h1>
           </div>
         </div>
-        <p className="mt-4 max-w-3xl text-white/80">
+        <p className="mt-4 max-w-3xl text-slate-600">
           Przeglądaj zgłoszenia użytkowników, edytuj wydarzenia i wykonuj akcje zbiorcze bez
           opuszczania panelu.
         </p>
@@ -837,13 +943,103 @@ export function AdminPanel() {
             <CardContent className="space-y-4 p-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
+                  <h2 className="text-lg font-semibold">Wyszukiwanie i sortowanie</h2>
+                  <p className="text-sm text-slate-600">
+                    Szukaj po tytule, kategorii, autorze, lokalizacji, dacie i liczbach biletów.
+                  </p>
+                </div>
+                <p className="text-sm text-slate-600">
+                  Widoczne wydarzenia: <span className="font-semibold">{filteredSortedEvents.length}</span>
+                </p>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                <div className="md:col-span-2 xl:col-span-2">
+                  <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="eventSearch">
+                    Szukaj wydarzeń
+                  </label>
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+                    <input
+                      id="eventSearch"
+                      value={eventSearch}
+                      onChange={(e) => setEventSearch(e.target.value)}
+                      placeholder="Tytuł, kategoria, lokalizacja, autor, data, ceny..."
+                      className="w-full rounded-md border border-slate-300 bg-white py-2 pl-10 pr-3 text-sm"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="eventSortBy">
+                    Sortuj według
+                  </label>
+                  <select
+                    id="eventSortBy"
+                    value={eventSortBy}
+                    onChange={(e) => setEventSortBy(e.target.value as typeof eventSortBy)}
+                    className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                  >
+                    <option value="date">Daty wydarzenia</option>
+                    <option value="title">Tytułu</option>
+                    <option value="category">Kategorii</option>
+                    <option value="creator">Autora</option>
+                    <option value="location">Lokalizacji</option>
+                    <option value="price">Ceny biletu</option>
+                    <option value="available">Dostępnych biletów</option>
+                    <option value="sold">Sprzedanych biletów</option>
+                    <option value="createdAt">Daty utworzenia</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="eventSortDirection">
+                    Kierunek
+                  </label>
+                  <select
+                    id="eventSortDirection"
+                    value={eventSortDirection}
+                    onChange={(e) => setEventSortDirection(e.target.value as "asc" | "desc")}
+                    className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                  >
+                    <option value="asc">Rosnąco</option>
+                    <option value="desc">Malejąco</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="outline" onClick={() => setEventSearch("")}>
+                  Wyczyść wyszukiwanie
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setEventSortBy("date");
+                    setEventSortDirection("asc");
+                  }}
+                >
+                  Resetuj sortowanie
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-slate-200">
+            <CardContent className="space-y-4 p-5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
                   <h2 className="text-lg font-semibold">Akcje zbiorcze</h2>
                   <p className="text-sm text-slate-600">
                     Zaznacz wydarzenia i wykonaj operację na wielu pozycjach jednocześnie.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Button type="button" variant="outline" onClick={selectAllVisible} disabled={events.length === 0}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={selectAllVisible}
+                    disabled={filteredSortedEvents.length === 0}
+                  >
                     Zaznacz wszystko
                   </Button>
                   <Button type="button" variant="outline" onClick={clearSelection} disabled={selectedEventIds.size === 0}>
@@ -874,7 +1070,7 @@ export function AdminPanel() {
                 <Button
                   type="button"
                   onClick={handleBulkMove}
-                  disabled={selectedEventIds.size === 0 || bulkActionLoading === "move"}
+                  disabled={visibleSelectedEvents.length === 0 || bulkActionLoading === "move"}
                 >
                   {bulkActionLoading === "move" ? "Przenoszenie..." : "Przenieś zaznaczone"}
                 </Button>
@@ -882,28 +1078,28 @@ export function AdminPanel() {
                   type="button"
                   variant="destructive"
                   onClick={handleBulkDelete}
-                  disabled={selectedEventIds.size === 0 || bulkActionLoading === "delete"}
+                  disabled={visibleSelectedEvents.length === 0 || bulkActionLoading === "delete"}
                 >
                   {bulkActionLoading === "delete" ? "Usuwanie..." : "Usuń zaznaczone"}
                 </Button>
               </div>
 
               <p className="text-sm text-slate-600">
-                Zaznaczono: <span className="font-semibold">{selectedEventIds.size}</span>
+                Zaznaczono: <span className="font-semibold">{visibleSelectedEvents.length}</span>
               </p>
             </CardContent>
           </Card>
 
           {loadingData && <p className="text-gray-500">Ładowanie wydarzeń...</p>}
 
-          {!loadingData && events.length === 0 && (
+          {!loadingData && filteredSortedEvents.length === 0 && (
             <Card>
               <CardContent className="p-6 text-gray-600">Brak wydarzeń do wyświetlenia.</CardContent>
             </Card>
           )}
 
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {events.map((event) => {
+            {filteredSortedEvents.map((event) => {
               const eventId = Number(event.id);
               const isSelected = selectedEventIds.has(eventId);
 
