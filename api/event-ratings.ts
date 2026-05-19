@@ -17,6 +17,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === "GET") {
     try {
       await ensureEventRatingsTable();
+      await ensureTicketPurchasesTable();
 
       const eventId = Number(req.query?.eventId);
       const authUser = await authenticateRequest(req);
@@ -109,6 +110,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             : await sql`
                 SELECT event_id, rating, review_text, updated_at
                 FROM event_ratings
+              WHERE user_id = ${authUser.userId}
+              `
+          : [];
+
+      const purchasedEventIdsRows =
+        authUser
+          ? Number.isFinite(eventId) && eventId > 0
+            ? await sql`
+                SELECT DISTINCT event_id
+                FROM ticket_purchases
+                WHERE user_id = ${authUser.userId}
+                  AND event_id = ${eventId}
+              `
+            : await sql`
+                SELECT DISTINCT event_id
+                FROM ticket_purchases
                 WHERE user_id = ${authUser.userId}
               `
           : [];
@@ -133,6 +150,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           reviewText: row.review_text ? String(row.review_text) : "",
           updatedAt: row.updated_at,
         })),
+        purchasedEventIds: purchasedEventIdsRows.map((row: any) => Number(row.event_id)),
       });
     } catch (error: any) {
       console.error("EVENT RATINGS GET ERROR:", error);
@@ -193,7 +211,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         FROM ticket_purchases
         WHERE user_id = ${authUser.userId}
           AND event_id = ${eventId}
-          AND refunded_at IS NULL
         LIMIT 1
       `;
 

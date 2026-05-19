@@ -59,10 +59,6 @@ type MyRating = {
   updatedAt: string;
 };
 
-type TicketPurchase = {
-  eventId: number;
-};
-
 type SortOption =
   | "priceAsc"
   | "priceDesc"
@@ -125,7 +121,7 @@ function canRateEvent(eventDate: string, hasPurchasedTicket: boolean) {
 }
 
 export function ArchiveEvents() {
-  const { user, token } = useAuth();
+  const { token } = useAuth();
   const [events, setEvents] = useState<ArchiveEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -230,6 +226,13 @@ export function ArchiveEvents() {
         }
         const normalizedMyRatings = Object.fromEntries(myRatingsMap);
         setMyRatings(normalizedMyRatings);
+        setPurchasedEventIds(
+          new Set(
+            (Array.isArray(data?.purchasedEventIds) ? data.purchasedEventIds : []).map((id: unknown) =>
+              Number(id)
+            )
+          )
+        );
 
         setRatingDrafts((prev) => {
           const next = { ...prev };
@@ -256,46 +259,10 @@ export function ArchiveEvents() {
   }, [token]);
 
   useEffect(() => {
-    if (!token || !user) {
+    if (!token) {
       setPurchasedEventIds(new Set());
-      return;
     }
-
-    let mounted = true;
-    const loadPurchases = async () => {
-      try {
-        const response = await fetch("/api/my-tickets", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error("Nie udało się pobrać zakupionych biletów.");
-        }
-
-        const data = await response.json();
-        if (!mounted) {
-          return;
-        }
-
-        const ids = new Set<number>();
-        for (const item of Array.isArray(data?.items) ? (data.items as TicketPurchase[]) : []) {
-          ids.add(Number(item.eventId));
-        }
-        setPurchasedEventIds(ids);
-      } catch (err) {
-        if (mounted) {
-          console.error(err);
-        }
-      }
-    };
-
-    loadPurchases();
-    return () => {
-      mounted = false;
-    };
-  }, [token, user]);
+  }, [token]);
 
   const categories = useMemo(() => {
     const now = Date.now();
@@ -473,6 +440,13 @@ export function ArchiveEvents() {
         });
       }
       setMyRatings(Object.fromEntries(myRatingsMap));
+      setPurchasedEventIds(
+        new Set(
+          (Array.isArray(ratingsData?.purchasedEventIds) ? ratingsData.purchasedEventIds : []).map(
+            (id: unknown) => Number(id)
+          )
+        )
+      );
 
       toast.success("Ocena została zapisana.");
     } catch (err) {
