@@ -1,6 +1,9 @@
 import { sql } from "../lib/db.js";
 import { authenticateRequest } from "../lib/auth.js";
 import { ensureEventSalesColumns } from "../lib/event-sales.js";
+import { ensureTicketPurchasesTable } from "../lib/ticket-purchases.js";
+import { ensureEventRatingsTable } from "../lib/event-ratings.js";
+import { ensureEventReportsTable } from "../lib/event-reports.js";
 
 type EventRow = {
   id: number | string;
@@ -967,6 +970,81 @@ export default async function handler(req: any, res: any) {
     } catch (error: any) {
       console.error("EVENT UPDATE ERROR:", error);
       return res.status(500).json({ error: error.message ?? "Update failed" });
+    }
+  }
+
+  if (req.method === "DELETE") {
+    try {
+      await ensureEventSalesColumns();
+      await ensureTicketPurchasesTable();
+      await ensureEventRatingsTable();
+      await ensureEventReportsTable();
+
+      const authUser = await authenticateRequest(req);
+      if (!authUser) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const idFromQuery = Number(req.query?.id);
+      if (!Number.isFinite(idFromQuery) || idFromQuery <= 0) {
+        return res.status(400).json({ error: "Invalid event id" });
+      }
+
+      const eventRows = await sql`
+        SELECT id, creator_id
+        FROM events
+        WHERE id = ${idFromQuery}
+        LIMIT 1
+      `;
+      const eventRow = eventRows[0];
+      if (!eventRow) {
+        return res.status(404).json({ error: "Event not found" });
+      }
+
+      const isOwner = Number(eventRow.creator_id) === Number(authUser.userId);
+      const isAdmin = authUser.is_admin === true;
+      if (!isOwner && !isAdmin) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+
+      await sql`BEGIN`;
+
+      await sql`
+        DELETE FROM event_reports
+        WHERE event_id = ${idFromQuery}
+      `;
+
+      await sql`
+        DELETE FROM event_ratings
+        WHERE event_id = ${idFromQuery}
+      `;
+
+      await sql`
+        DELETE FROM ticket_purchases
+        WHERE event_id = ${idFromQuery}
+      `;
+
+      await sql`
+        DELETE FROM ticket_types
+        WHERE event_id = ${idFromQuery}
+      `;
+
+      await sql`
+        DELETE FROM events
+        WHERE id = ${idFromQuery}
+      `;
+
+      await sql`COMMIT`;
+
+      return res.status(200).json({ message: "Event deleted" });
+    } catch (error: any) {
+      try {
+        await sql`ROLLBACK`;
+      } catch {
+        // ignore rollback errors
+      }
+      console.error("EVENT DELETE ERROR:", error);
+      return res.status(500).json({ error: error.message ?? "Delete failed" });
     }
   }
 

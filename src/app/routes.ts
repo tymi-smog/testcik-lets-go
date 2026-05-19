@@ -6,6 +6,7 @@ import { Events } from "./pages/events";
 import { ArchiveEvents } from "./pages/ArchiveEvents";
 import { EventDetail } from "./pages/EventDetail";
 import { Checkout } from "./pages/Checkout";
+import { AdminPanel } from "./pages/AdminPanel";
 
 import { Login } from "./pages/login";
 import { Register } from "./pages/register";
@@ -30,6 +31,7 @@ export const router = createBrowserRouter([
 
       { path: "event/:id", Component: EventDetail },
       { path: "checkout", Component: Checkout },
+      { path: "admin", Component: AdminPanel },
 
       { path: "login", Component: Login },
       { path: "register", Component: Register },

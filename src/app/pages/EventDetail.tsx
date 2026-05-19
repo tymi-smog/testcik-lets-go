@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router";
 import { useCart } from "../context/CartContext";
+import { useAuth } from "../../context/AuthContext";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
@@ -68,6 +69,7 @@ const fallbackImage =
 export function EventDetail() {
   const { id } = useParams();
   const { addToCart } = useCart();
+  const { user, token } = useAuth();
 
   const [selectedTickets, setSelectedTickets] = useState<Record<string, number>>({});
   const [event, setEvent] = useState<EventDetailData | null>(null);
@@ -76,6 +78,9 @@ export function EventDetail() {
   const [reviews, setReviews] = useState<EventReview[]>([]);
   const [averageRating, setAverageRating] = useState<number | null>(null);
   const [ratingsCount, setRatingsCount] = useState(0);
+  const [reportReason, setReportReason] = useState("spam");
+  const [reportDetails, setReportDetails] = useState("");
+  const [submittingReport, setSubmittingReport] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -218,6 +223,46 @@ export function EventDetail() {
       setSelectedTickets({});
     }
   };
+
+  async function handleReportEvent() {
+    if (!user || !token) {
+      toast.error("Zaloguj się, aby zgłosić wydarzenie.");
+      return;
+    }
+
+    if (!event) {
+      return;
+    }
+
+    try {
+      setSubmittingReport(true);
+      const response = await fetch("/api/event-reports", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          eventId: Number(event.id),
+          reason: reportReason,
+          details: reportDetails,
+        }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data?.error || "Nie udało się wysłać zgłoszenia.");
+      }
+
+      toast.success("Zgłoszenie zostało wysłane.");
+      setReportDetails("");
+      setReportReason("spam");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Wystąpił nieznany błąd.");
+    } finally {
+      setSubmittingReport(false);
+    }
+  }
 
   if (isLoading) {
     return (
@@ -398,6 +443,56 @@ export function EventDetail() {
                 ))}
               </CardContent>
             </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Zgłoś wydarzenie</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {!user ? (
+                  <p className="text-sm text-gray-600">
+                    Zaloguj się, aby zgłosić wydarzenie do administracji.
+                  </p>
+                ) : (
+                  <>
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-700" htmlFor="reportReason">
+                        Powód zgłoszenia
+                      </label>
+                      <select
+                        id="reportReason"
+                        value={reportReason}
+                        onChange={(e) => setReportReason(e.target.value)}
+                        className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                      >
+                        <option value="spam">Spam</option>
+                        <option value="scam">Oszustwo</option>
+                        <option value="inappropriate">Nieodpowiednie treści</option>
+                        <option value="duplicate">Duplikat</option>
+                        <option value="other">Inne</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-700" htmlFor="reportDetails">
+                        Dodatkowe informacje
+                      </label>
+                      <textarea
+                        id="reportDetails"
+                        value={reportDetails}
+                        onChange={(e) => setReportDetails(e.target.value)}
+                        placeholder="Opisz krótko, dlaczego zgłaszasz to wydarzenie."
+                        className="min-h-28 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    <Button type="button" onClick={handleReportEvent} disabled={submittingReport}>
+                      {submittingReport ? "Wysyłanie..." : "Wyślij zgłoszenie"}
+                    </Button>
+                  </>
+                )}
+              </CardContent>
+            </Card>
           </div>
 
           <div>
@@ -480,4 +575,3 @@ export function EventDetail() {
     </div>
   );
 }
-

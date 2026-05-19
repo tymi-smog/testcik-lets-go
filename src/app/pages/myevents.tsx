@@ -1,5 +1,6 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
+import { useSearchParams } from "react-router-dom";
 import { useRef } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { Checkbox } from "../components/ui/checkbox";
@@ -89,6 +90,8 @@ function getMyEventStats(event: MyEvent) {
 
 export function MyEvents() {
   const { token, user, isLoading } = useAuth();
+  const [searchParams] = useSearchParams();
+  const autoEditHandledRef = useRef<string | null>(null);
   const formSectionRef = useRef<HTMLElement | null>(null);
   const titleInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -152,6 +155,24 @@ export function MyEvents() {
   useEffect(() => {
     loadMyEvents(user?.userId);
   }, [user?.userId, user?.is_admin]);
+
+  useEffect(() => {
+    const editId = searchParams.get("edit");
+    if (!user?.is_admin || !editId || loadingEvents) {
+      return;
+    }
+
+    if (autoEditHandledRef.current === editId) {
+      return;
+    }
+
+    const eventToEdit = events.find((event) => String(event.id) === editId);
+    if (eventToEdit) {
+      autoEditHandledRef.current = editId;
+      startEditing(eventToEdit);
+    }
+  }, [events, loadingEvents, searchParams, user?.is_admin]);
+
 
   const categories = useMemo(() => {
     const unique = [...new Set(events.map((event) => event.category || "Inne"))];

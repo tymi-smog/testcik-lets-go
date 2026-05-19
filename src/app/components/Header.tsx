@@ -36,7 +36,7 @@ export function Header() {
             Wszystkie wydarzenia
           </Link>
           <Link to="/events-archive" className="hover:text-blue-600 transition-colors">
-            Archiwum wydarzeń
+            Archiwum wydarzeÄąâ€ž
           </Link>
         </nav>
 
@@ -69,10 +69,10 @@ export function Header() {
               {isLoggedIn && (
                 <>
                   <DropdownMenuItem asChild>
-                    <Link to="/profile">Szczegóły</Link>
+                    <Link to="/profile">SzczegÄ‚Ĺ‚Äąâ€šy</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/upcoming-events">Nadchodzące wydarzenia</Link>
+                    <Link to="/upcoming-events">NadchodzĂ„â€¦ce wydarzenia</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link to="/my-events">Moje wydarzenia</Link>
@@ -80,7 +80,12 @@ export function Header() {
                   <DropdownMenuItem asChild>
                     <Link to="/my-tickets">Moje bilety</Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleLogout}>Wyloguj się</DropdownMenuItem>
+                  {user?.is_admin && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin">Panel admina</Link>
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem onClick={handleLogout}>Wyloguj siÄ™</DropdownMenuItem>
                 </>
               )}
             </DropdownMenuContent>
