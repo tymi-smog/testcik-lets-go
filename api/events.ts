@@ -706,6 +706,201 @@ export default async function handler(req: any, res: any) {
     }
   }
 
+  if (req.method === "GET" && String(req.query?.adminUsers) === "1") {
+    try {
+      const authUser = await authenticateRequest(req);
+      if (rejectIfBannedUser(authUser, res)) {
+        return;
+      }
+      if (!authUser) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      if (!authUser.is_admin) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+
+      await ensureUserBanColumns();
+      const userJoinColumn = await getUsersJoinColumn();
+      if (!userJoinColumn) {
+        return res.status(500).json({ error: "Nie udało się ustalić kolumny użytkownika." });
+      }
+      const searchFilter = String(req.query?.search ?? "").trim() || null;
+
+      const rows =
+        userJoinColumn === "user_id"
+          ? await sql`
+              WITH rating_stats AS (
+                SELECT
+                  user_id,
+                  COUNT(*)::int AS ratings_count,
+                  COUNT(review_text)::int AS reviews_count,
+                  AVG(rating)::float8 AS average_rating,
+                  MIN(created_at) AS first_rated_at,
+                  MAX(created_at) AS last_rated_at
+                FROM event_ratings
+                GROUP BY user_id
+              )
+              SELECT
+                u.user_id,
+                u.username,
+                u.email,
+                u.is_verified,
+                u.is_admin,
+                u.ban_until,
+                u.ban_reason,
+                u.banned_at,
+                COALESCE(rs.ratings_count, 0) AS ratings_count,
+                COALESCE(rs.reviews_count, 0) AS reviews_count,
+                COALESCE(rs.average_rating, 0) AS average_rating,
+                rs.first_rated_at,
+                rs.last_rated_at
+              FROM users u
+              LEFT JOIN rating_stats rs ON rs.user_id = u.user_id
+              WHERE (
+                ${searchFilter}::text IS NULL
+                OR LOWER(COALESCE(u.username, '')) LIKE LOWER('%' || ${searchFilter} || '%')
+                OR LOWER(COALESCE(u.email, '')) LIKE LOWER('%' || ${searchFilter} || '%')
+              )
+              ORDER BY u.username ASC, u.user_id ASC
+            `
+          : userJoinColumn === "id"
+            ? await sql`
+                WITH rating_stats AS (
+                  SELECT
+                    user_id,
+                    COUNT(*)::int AS ratings_count,
+                    COUNT(review_text)::int AS reviews_count,
+                    AVG(rating)::float8 AS average_rating,
+                    MIN(created_at) AS first_rated_at,
+                    MAX(created_at) AS last_rated_at
+                  FROM event_ratings
+                  GROUP BY user_id
+                )
+                SELECT
+                  u.id,
+                  u.username,
+                  u.email,
+                  u.is_verified,
+                  u.is_admin,
+                  u.ban_until,
+                  u.ban_reason,
+                  u.banned_at,
+                  COALESCE(rs.ratings_count, 0) AS ratings_count,
+                  COALESCE(rs.reviews_count, 0) AS reviews_count,
+                  COALESCE(rs.average_rating, 0) AS average_rating,
+                  rs.first_rated_at,
+                  rs.last_rated_at
+                FROM users u
+                LEFT JOIN rating_stats rs ON rs.user_id = u.id
+                WHERE (
+                  ${searchFilter}::text IS NULL
+                  OR LOWER(COALESCE(u.username, '')) LIKE LOWER('%' || ${searchFilter} || '%')
+                  OR LOWER(COALESCE(u.email, '')) LIKE LOWER('%' || ${searchFilter} || '%')
+                )
+                ORDER BY u.username ASC, u.id ASC
+              `
+            : await sql`
+                WITH rating_stats AS (
+                  SELECT
+                    user_id,
+                    COUNT(*)::int AS ratings_count,
+                    COUNT(review_text)::int AS reviews_count,
+                    AVG(rating)::float8 AS average_rating,
+                    MIN(created_at) AS first_rated_at,
+                    MAX(created_at) AS last_rated_at
+                  FROM event_ratings
+                  GROUP BY user_id
+                )
+                SELECT
+                  NULL::int AS id,
+                  u.username,
+                  u.email,
+                  u.is_verified,
+                  u.is_admin,
+                  u.ban_until,
+                  u.ban_reason,
+                  u.banned_at,
+                  COALESCE(rs.ratings_count, 0) AS ratings_count,
+                  COALESCE(rs.reviews_count, 0) AS reviews_count,
+                  COALESCE(rs.average_rating, 0) AS average_rating,
+                  rs.first_rated_at,
+                  rs.last_rated_at
+                FROM users u
+                LEFT JOIN rating_stats rs ON rs.user_id = NULL
+                WHERE (
+                  ${searchFilter}::text IS NULL
+                  OR LOWER(COALESCE(u.username, '')) LIKE LOWER('%' || ${searchFilter} || '%')
+                  OR LOWER(COALESCE(u.email, '')) LIKE LOWER('%' || ${searchFilter} || '%')
+                )
+                ORDER BY u.username ASC
+              `;
+
+      const users = rows
+        .map((row: any) => {
+          const userId = Number(row.user_id ?? row.id);
+          if (!Number.isFinite(userId) || userId <= 0) {
+            return null;
+          }
+
+          const averageRating = Number(row.average_rating ?? 0);
+          const banUntil = row.ban_until ? String(row.ban_until) : null;
+          return {
+            userId,
+            username: row.username ? String(row.username) : "Użytkownik",
+            email: row.email ? String(row.email) : "",
+            isVerified: row.is_verified === true || row.is_verified === "t" || row.is_verified === 1,
+            isAdmin: row.is_admin === true || row.is_admin === "t" || row.is_admin === 1,
+            banUntil,
+            banReason: row.ban_reason ? String(row.ban_reason) : null,
+            bannedAt: row.banned_at ? String(row.banned_at) : null,
+            isBanned: banUntil ? Date.parse(banUntil) > Date.now() : false,
+            ratingsCount: Number(row.ratings_count ?? 0),
+            reviewsCount: Number(row.reviews_count ?? 0),
+            averageRating: Number.isFinite(averageRating) ? Number(averageRating.toFixed(2)) : 0,
+            firstRatedAt: row.first_rated_at ? String(row.first_rated_at) : null,
+            lastRatedAt: row.last_rated_at ? String(row.last_rated_at) : null,
+          };
+        })
+        .filter(Boolean);
+
+      const summary = users.reduce(
+        (
+          acc: {
+            usersCount: number;
+            bannedCount: number;
+            adminCount: number;
+            verifiedCount: number;
+          },
+          userEntry: any
+        ) => {
+          acc.usersCount += 1;
+          if (userEntry.isBanned) acc.bannedCount += 1;
+          if (userEntry.isAdmin) acc.adminCount += 1;
+          if (userEntry.isVerified) acc.verifiedCount += 1;
+          return acc;
+        },
+        {
+          usersCount: 0,
+          bannedCount: 0,
+          adminCount: 0,
+          verifiedCount: 0,
+        }
+      );
+
+      return res.status(200).json({
+        summary,
+        users,
+        filters: {
+          search: searchFilter,
+        },
+      });
+    } catch (error: any) {
+      console.error("ADMIN USERS GET ERROR:", error);
+      return res.status(500).json({ error: error.message ?? "Users fetch failed" });
+    }
+  }
+
   if (req.method === "POST" && ["ban-user", "unban-user"].includes(String(req.query?.action ?? ""))) {
     try {
       await ensureUserBanColumns();

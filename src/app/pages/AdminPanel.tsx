@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+﻿import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import {
   AlertTriangle,
@@ -139,6 +139,36 @@ type UserReviewsResponse = {
   };
 };
 
+type AdminUser = {
+  userId: number;
+  username: string;
+  email: string;
+  isVerified: boolean;
+  isAdmin: boolean;
+  isBanned: boolean;
+  banUntil: string | null;
+  banReason: string | null;
+  bannedAt: string | null;
+  ratingsCount: number;
+  reviewsCount: number;
+  averageRating: number;
+  firstRatedAt: string | null;
+  lastRatedAt: string | null;
+};
+
+type AdminUsersResponse = {
+  summary: {
+    usersCount: number;
+    bannedCount: number;
+    adminCount: number;
+    verifiedCount: number;
+  };
+  users: AdminUser[];
+  filters: {
+    search: string | null;
+  };
+};
+
 const reasonLabels: Record<string, string> = {
   spam: "Spam",
   scam: "Oszustwo",
@@ -163,12 +193,12 @@ function formatLocation(city?: string | null, venue?: string | null) {
 }
 
 function formatMoney(amount: number) {
-  return `${amount.toFixed(2)} zł`;
+  return `${amount.toFixed(2)} zĹ‚`;
 }
 
 function renderStars(rating: number) {
   const value = Math.max(0, Math.min(5, Math.round(rating)));
-  return "★★★★★".slice(0, value) + "☆☆☆☆☆".slice(0, 5 - value);
+  return "â…â…â…â…â…".slice(0, value) + "â†â†â†â†â†".slice(0, 5 - value);
 }
 
 export function AdminPanel() {
@@ -177,12 +207,15 @@ export function AdminPanel() {
   const [events, setEvents] = useState<AdminEvent[]>([]);
   const [analytics, setAnalytics] = useState<CommissionAnalyticsResponse | null>(null);
   const [userReviews, setUserReviews] = useState<UserReviewsResponse | null>(null);
+  const [adminUsers, setAdminUsers] = useState<AdminUsersResponse | null>(null);
   const [loadingData, setLoadingData] = useState(true);
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
   const [userReviewsLoading, setUserReviewsLoading] = useState(true);
+  const [adminUsersLoading, setAdminUsersLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [analyticsError, setAnalyticsError] = useState<string | null>(null);
   const [userReviewsError, setUserReviewsError] = useState<string | null>(null);
+  const [adminUsersError, setAdminUsersError] = useState<string | null>(null);
   const [deletingEventId, setDeletingEventId] = useState<number | null>(null);
   const [selectedEventIds, setSelectedEventIds] = useState<Set<number>>(new Set());
   const [bulkCategory, setBulkCategory] = useState("");
@@ -204,6 +237,9 @@ export function AdminPanel() {
     to: "",
     minAverage: "",
     maxAverage: "",
+  });
+  const [adminUsersFilters, setAdminUsersFilters] = useState({
+    search: "",
   });
   const [banDrafts, setBanDrafts] = useState<Record<number, { until: string; reason: string }>>({});
 
@@ -345,13 +381,13 @@ export function AdminPanel() {
 
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(data?.error || "Nie udało się pobrać danych o prowizjach.");
+        throw new Error(data?.error || "Nie udaĹ‚o siÄ™ pobraÄ‡ danych o prowizjach.");
       }
 
       setAnalytics(data as CommissionAnalyticsResponse);
     } catch (err) {
       setAnalytics(null);
-      setAnalyticsError(err instanceof Error ? err.message : "Wystąpił nieznany błąd.");
+      setAnalyticsError(err instanceof Error ? err.message : "WystÄ…piĹ‚ nieznany bĹ‚Ä…d.");
     } finally {
       setAnalyticsLoading(false);
     }
@@ -383,15 +419,49 @@ export function AdminPanel() {
 
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(data?.error || "Nie udało się pobrać opinii użytkowników.");
+        throw new Error(data?.error || "Nie udaĹ‚o siÄ™ pobraÄ‡ opinii uĹĽytkownikĂłw.");
       }
 
       setUserReviews(data as UserReviewsResponse);
     } catch (err) {
       setUserReviews(null);
-      setUserReviewsError(err instanceof Error ? err.message : "Wystąpił nieznany błąd.");
+      setUserReviewsError(err instanceof Error ? err.message : "WystÄ…piĹ‚ nieznany bĹ‚Ä…d.");
     } finally {
       setUserReviewsLoading(false);
+    }
+  }
+
+  async function loadAdminUsers(filters = adminUsersFilters) {
+    if (!token || !isAdmin) {
+      setAdminUsers(null);
+      setAdminUsersLoading(false);
+      return;
+    }
+
+    try {
+      setAdminUsersLoading(true);
+      setAdminUsersError(null);
+
+      const params = new URLSearchParams({ adminUsers: "1" });
+      if (filters.search.trim()) params.set("search", filters.search.trim());
+
+      const response = await fetch(`/api/events?${params.toString()}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data?.error || "Nie udaĹ‚o siÄ™ pobraÄ‡ listy uĹĽytkownikĂłw.");
+      }
+
+      setAdminUsers(data as AdminUsersResponse);
+    } catch (err) {
+      setAdminUsers(null);
+      setAdminUsersError(err instanceof Error ? err.message : "WystÄ…piĹ‚ nieznany bĹ‚Ä…d.");
+    } finally {
+      setAdminUsersLoading(false);
     }
   }
 
@@ -399,7 +469,7 @@ export function AdminPanel() {
     if (!token) return;
 
     if (!until || !reason.trim()) {
-      toast.error("Podaj datę końca bana i opis.");
+      toast.error("Podaj datÄ™ koĹ„ca bana i opis.");
       return;
     }
 
@@ -415,13 +485,14 @@ export function AdminPanel() {
 
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(data?.error || "Nie udało się zablokować użytkownika.");
+        throw new Error(data?.error || "Nie udaĹ‚o siÄ™ zablokowaÄ‡ uĹĽytkownika.");
       }
 
-      toast.success("Użytkownik został zablokowany.");
+      toast.success("UĹĽytkownik zostaĹ‚ zablokowany.");
+      void loadAdminUsers();
       void loadUserReviews();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Wystąpił nieznany błąd.");
+      toast.error(err instanceof Error ? err.message : "WystÄ…piĹ‚ nieznany bĹ‚Ä…d.");
     }
   }
 
@@ -440,13 +511,14 @@ export function AdminPanel() {
 
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(data?.error || "Nie udało się odblokować użytkownika.");
+        throw new Error(data?.error || "Nie udaĹ‚o siÄ™ odblokowaÄ‡ uĹĽytkownika.");
       }
 
-      toast.success("Użytkownik został odblokowany.");
+      toast.success("UĹĽytkownik zostaĹ‚ odblokowany.");
+      void loadAdminUsers();
       void loadUserReviews();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Wystąpił nieznany błąd.");
+      toast.error(err instanceof Error ? err.message : "WystÄ…piĹ‚ nieznany bĹ‚Ä…d.");
     }
   }
 
@@ -476,11 +548,11 @@ export function AdminPanel() {
 
         if (!reportsResponse.ok) {
           const payload = await reportsResponse.json().catch(() => ({}));
-          throw new Error(payload?.error || "Nie udało się pobrać zgłoszeń.");
+          throw new Error(payload?.error || "Nie udaĹ‚o siÄ™ pobraÄ‡ zgĹ‚oszeĹ„.");
         }
 
         if (!eventsResponse.ok) {
-          throw new Error("Nie udało się pobrać wydarzeń.");
+          throw new Error("Nie udaĹ‚o siÄ™ pobraÄ‡ wydarzeĹ„.");
         }
 
         const reportsData = await reportsResponse.json();
@@ -492,7 +564,7 @@ export function AdminPanel() {
         setEvents(Array.isArray(eventsData) ? eventsData : []);
       } catch (err) {
         if (mounted) {
-          setError(err instanceof Error ? err.message : "Wystąpił nieznany błąd.");
+          setError(err instanceof Error ? err.message : "WystÄ…piĹ‚ nieznany bĹ‚Ä…d.");
           setReports([]);
           setEvents([]);
         }
@@ -506,6 +578,7 @@ export function AdminPanel() {
     loadData();
     void loadAnalytics();
     void loadUserReviews();
+    void loadAdminUsers();
 
     return () => {
       mounted = false;
@@ -516,7 +589,7 @@ export function AdminPanel() {
     if (!token) return;
 
     const confirmed = window.confirm(
-      "Czy na pewno chcesz usunąć to wydarzenie? Spowoduje to też usunięcie zgłoszeń, ocen i zakupów powiązanych z tym wydarzeniem."
+      "Czy na pewno chcesz usunÄ…Ä‡ to wydarzenie? Spowoduje to teĹĽ usuniÄ™cie zgĹ‚oszeĹ„, ocen i zakupĂłw powiÄ…zanych z tym wydarzeniem."
     );
     if (!confirmed) return;
 
@@ -531,10 +604,10 @@ export function AdminPanel() {
 
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(data?.error || "Nie udało się usunąć wydarzenia.");
+        throw new Error(data?.error || "Nie udaĹ‚o siÄ™ usunÄ…Ä‡ wydarzenia.");
       }
 
-      toast.success("Wydarzenie zostało usunięte.");
+      toast.success("Wydarzenie zostaĹ‚o usuniÄ™te.");
       setEvents((prev) => prev.filter((event) => Number(event.id) !== eventId));
       setReports((prev) => prev.filter((report) => report.eventId !== eventId));
       setSelectedEventIds((prev) => {
@@ -543,7 +616,7 @@ export function AdminPanel() {
         return next;
       });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Wystąpił nieznany błąd.");
+      toast.error(err instanceof Error ? err.message : "WystÄ…piĹ‚ nieznany bĹ‚Ä…d.");
     } finally {
       setDeletingEventId(null);
     }
@@ -553,7 +626,7 @@ export function AdminPanel() {
     if (!token || visibleSelectedEvents.length === 0) return;
 
     const confirmed = window.confirm(
-      `Czy na pewno chcesz usunąć ${visibleSelectedEvents.length} wydarzeń?`
+      `Czy na pewno chcesz usunÄ…Ä‡ ${visibleSelectedEvents.length} wydarzeĹ„?`
     );
     if (!confirmed) return;
 
@@ -570,15 +643,15 @@ export function AdminPanel() {
 
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(data?.error || "Nie udało się usunąć wydarzeń.");
+        throw new Error(data?.error || "Nie udaĹ‚o siÄ™ usunÄ…Ä‡ wydarzeĹ„.");
       }
 
-      toast.success("Wydarzenia zostały usunięte.");
+      toast.success("Wydarzenia zostaĹ‚y usuniÄ™te.");
       setEvents((prev) => prev.filter((event) => !visibleSelectedEventIds.has(Number(event.id))));
       setReports((prev) => prev.filter((report) => !visibleSelectedEventIds.has(report.eventId)));
       setSelectedEventIds(new Set());
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Wystąpił nieznany błąd.");
+      toast.error(err instanceof Error ? err.message : "WystÄ…piĹ‚ nieznany bĹ‚Ä…d.");
     } finally {
       setBulkActionLoading(null);
     }
@@ -589,7 +662,7 @@ export function AdminPanel() {
 
     const category = bulkCategory.trim();
     if (!category) {
-      toast.error("Wybierz kategorię docelową.");
+      toast.error("Wybierz kategoriÄ™ docelowÄ….");
       return;
     }
 
@@ -606,10 +679,10 @@ export function AdminPanel() {
 
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(data?.error || "Nie udało się przenieść wydarzeń.");
+        throw new Error(data?.error || "Nie udaĹ‚o siÄ™ przenieĹ›Ä‡ wydarzeĹ„.");
       }
 
-      toast.success("Wydarzenia zostały przeniesione do nowej kategorii.");
+      toast.success("Wydarzenia zostaĹ‚y przeniesione do nowej kategorii.");
       setEvents((prev) =>
         prev.map((event) =>
           visibleSelectedEventIds.has(Number(event.id)) ? { ...event, category } : event
@@ -617,7 +690,7 @@ export function AdminPanel() {
       );
       setSelectedEventIds(new Set());
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Wystąpił nieznany błąd.");
+      toast.error(err instanceof Error ? err.message : "WystÄ…piĹ‚ nieznany bĹ‚Ä…d.");
     } finally {
       setBulkActionLoading(null);
     }
@@ -656,6 +729,19 @@ export function AdminPanel() {
     void loadUserReviews(nextFilters);
   }
 
+  async function handleAdminUsersSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await loadAdminUsers(adminUsersFilters);
+  }
+
+  function clearAdminUsersFilters() {
+    const nextFilters = {
+      search: "",
+    };
+    setAdminUsersFilters(nextFilters);
+    void loadAdminUsers(nextFilters);
+  }
+
   function toggleSelected(eventId: number) {
     setSelectedEventIds((prev) => {
       const next = new Set(prev);
@@ -679,7 +765,7 @@ export function AdminPanel() {
   if (isLoading) {
     return (
       <div className="mx-auto max-w-6xl px-4 py-10">
-        <p className="text-gray-500">Ładowanie panelu...</p>
+        <p className="text-gray-500">Ĺadowanie panelu...</p>
       </div>
     );
   }
@@ -694,11 +780,11 @@ export function AdminPanel() {
               <h1 className="text-2xl font-semibold">Panel administratora</h1>
             </div>
             <p className="text-amber-800">
-              Dostęp do tego widoku mają tylko zalogowani administratorzy.
+              DostÄ™p do tego widoku majÄ… tylko zalogowani administratorzy.
             </p>
             {!user && (
               <Button asChild>
-                <Link to="/login">Przejdź do logowania</Link>
+                <Link to="/login">PrzejdĹş do logowania</Link>
               </Button>
             )}
           </CardContent>
@@ -718,7 +804,7 @@ export function AdminPanel() {
           </div>
         </div>
         <p className="mt-4 max-w-3xl text-slate-600">
-          Przeglądaj zgłoszenia użytkowników, edytuj wydarzenia i wykonuj akcje zbiorcze bez
+          PrzeglÄ…daj zgĹ‚oszenia uĹĽytkownikĂłw, edytuj wydarzenia i wykonuj akcje zbiorcze bez
           opuszczania panelu.
         </p>
       </div>
@@ -733,7 +819,7 @@ export function AdminPanel() {
         <Card>
           <CardContent className="flex items-center justify-between p-5">
             <div>
-              <p className="text-sm text-slate-500">Otwarte zgłoszenia</p>
+              <p className="text-sm text-slate-500">Otwarte zgĹ‚oszenia</p>
               <p className="text-3xl font-semibold">{openReports.length}</p>
             </div>
             <Flag className="size-10 text-amber-600" />
@@ -742,7 +828,7 @@ export function AdminPanel() {
         <Card>
           <CardContent className="flex items-center justify-between p-5">
             <div>
-              <p className="text-sm text-slate-500">Wszystkie zgłoszenia</p>
+              <p className="text-sm text-slate-500">Wszystkie zgĹ‚oszenia</p>
               <p className="text-3xl font-semibold">{reports.length}</p>
             </div>
             <AlertTriangle className="size-10 text-rose-600" />
@@ -760,19 +846,20 @@ export function AdminPanel() {
       </div>
 
       <Tabs defaultValue="reports" className="space-y-6">
-        <TabsList className="grid w-full max-w-5xl grid-cols-4">
+        <TabsList className="grid w-full max-w-5xl grid-cols-2 md:grid-cols-5">
           <TabsTrigger value="reports">Zgłoszenia</TabsTrigger>
           <TabsTrigger value="commission">Dochód</TabsTrigger>
-          <TabsTrigger value="users">Użytkownicy i opinie</TabsTrigger>
+          <TabsTrigger value="users">Użytkownicy</TabsTrigger>
+          <TabsTrigger value="opinions">Opinie</TabsTrigger>
           <TabsTrigger value="events">Wydarzenia</TabsTrigger>
         </TabsList>
 
         <TabsContent value="reports" className="space-y-4">
-          {loadingData && <p className="text-gray-500">Ładowanie zgłoszeń...</p>}
+          {loadingData && <p className="text-gray-500">Ĺadowanie zgĹ‚oszeĹ„...</p>}
 
           {!loadingData && reports.length === 0 && (
             <Card>
-              <CardContent className="p-6 text-gray-600">Brak zgłoszeń do wyświetlenia.</CardContent>
+              <CardContent className="p-6 text-gray-600">Brak zgĹ‚oszeĹ„ do wyĹ›wietlenia.</CardContent>
             </Card>
           )}
 
@@ -792,7 +879,7 @@ export function AdminPanel() {
                         <Badge variant="outline">{reasonLabels[report.reason] || report.reason}</Badge>
                       </div>
                       <p className="text-sm text-slate-500">
-                        Zgłoszone przez {report.reporterUsername} dnia {formatDate(report.createdAt)}
+                        ZgĹ‚oszone przez {report.reporterUsername} dnia {formatDate(report.createdAt)}
                       </p>
                     </div>
 
@@ -811,14 +898,14 @@ export function AdminPanel() {
                         onClick={() => handleDeleteEvent(report.eventId)}
                       >
                         <Trash2 className="mr-2 size-4" />
-                        {deletingEventId === report.eventId ? "Usuwanie..." : "Usuń wydarzenie"}
+                        {deletingEventId === report.eventId ? "Usuwanie..." : "UsuĹ„ wydarzenie"}
                       </Button>
                     </div>
                   </div>
 
                   <div className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-2">
                     <div>
-                      <p className="text-xs uppercase tracking-wide text-slate-500">Szczegóły zgłoszenia</p>
+                      <p className="text-xs uppercase tracking-wide text-slate-500">SzczegĂłĹ‚y zgĹ‚oszenia</p>
                       <p className="mt-1 text-sm text-slate-700">
                         {report.details || "Brak dodatkowego opisu."}
                       </p>
@@ -835,7 +922,7 @@ export function AdminPanel() {
                           : "Brak danych"}
                       </p>
                       <p>
-                        <span className="font-medium text-slate-800">Zgłoszenie zaktualizowano:</span>{" "}
+                        <span className="font-medium text-slate-800">ZgĹ‚oszenie zaktualizowano:</span>{" "}
                         {formatDate(report.updatedAt)}
                       </p>
                     </div>
@@ -851,20 +938,20 @@ export function AdminPanel() {
             <CardContent className="space-y-4 p-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-lg font-semibold">Dochód z prowizji</h2>
+                  <h2 className="text-lg font-semibold">DochĂłd z prowizji</h2>
                   <p className="text-sm text-slate-600">
-                    Prowizja 5% liczona jest od aktywnych zakupów biletów, bez zwróconych transakcji.
+                    Prowizja 5% liczona jest od aktywnych zakupĂłw biletĂłw, bez zwrĂłconych transakcji.
                   </p>
                 </div>
                 <Button type="button" variant="outline" onClick={() => void loadAnalytics()}>
-                  Odśwież dane
+                  OdĹ›wieĹĽ dane
                 </Button>
               </div>
 
               <form onSubmit={handleAnalyticsSubmit} className="grid gap-3 md:grid-cols-4">
                 <div className="md:col-span-2">
                   <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="commissionUser">
-                    Użytkownik
+                    UĹĽytkownik
                   </label>
                   <div className="relative">
                     <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
@@ -874,7 +961,7 @@ export function AdminPanel() {
                       onChange={(e) =>
                         setCommissionFilters((prev) => ({ ...prev, user: e.target.value }))
                       }
-                      placeholder="Szukaj po nazwie użytkownika"
+                      placeholder="Szukaj po nazwie uĹĽytkownika"
                       className="w-full rounded-md border border-slate-300 bg-white py-2 pl-10 pr-3 text-sm"
                     />
                   </div>
@@ -930,7 +1017,7 @@ export function AdminPanel() {
                 <div className="flex flex-wrap gap-2 md:col-span-4">
                   <Button type="submit">Filtruj</Button>
                   <Button type="button" variant="outline" onClick={clearAnalyticsFilters}>
-                    Wyczyść filtry
+                    WyczyĹ›Ä‡ filtry
                   </Button>
                 </div>
               </form>
@@ -947,9 +1034,9 @@ export function AdminPanel() {
             <Card>
               <CardContent className="flex items-center justify-between p-5">
                 <div>
-                  <p className="text-sm text-slate-500">Prowizja łącznie</p>
+                  <p className="text-sm text-slate-500">Prowizja Ĺ‚Ä…cznie</p>
                   <p className="text-3xl font-semibold">
-                    {analytics ? formatMoney(analytics.summary.commission) : analyticsLoading ? "..." : "0.00 zł"}
+                    {analytics ? formatMoney(analytics.summary.commission) : analyticsLoading ? "..." : "0.00 zĹ‚"}
                   </p>
                 </div>
                 <DollarSign className="size-10 text-emerald-600" />
@@ -958,9 +1045,9 @@ export function AdminPanel() {
             <Card>
               <CardContent className="flex items-center justify-between p-5">
                 <div>
-                  <p className="text-sm text-slate-500">Suma sprzedaży</p>
+                  <p className="text-sm text-slate-500">Suma sprzedaĹĽy</p>
                   <p className="text-3xl font-semibold">
-                    {analytics ? formatMoney(analytics.summary.subtotal) : analyticsLoading ? "..." : "0.00 zł"}
+                    {analytics ? formatMoney(analytics.summary.subtotal) : analyticsLoading ? "..." : "0.00 zĹ‚"}
                   </p>
                 </div>
                 <TrendingUp className="size-10 text-blue-600" />
@@ -969,9 +1056,9 @@ export function AdminPanel() {
             <Card>
               <CardContent className="flex items-center justify-between p-5">
                 <div>
-                  <p className="text-sm text-slate-500">Łącznie z prowizją</p>
+                  <p className="text-sm text-slate-500">ĹÄ…cznie z prowizjÄ…</p>
                   <p className="text-3xl font-semibold">
-                    {analytics ? formatMoney(analytics.summary.total) : analyticsLoading ? "..." : "0.00 zł"}
+                    {analytics ? formatMoney(analytics.summary.total) : analyticsLoading ? "..." : "0.00 zĹ‚"}
                   </p>
                 </div>
                 <CalendarRange className="size-10 text-violet-600" />
@@ -990,18 +1077,18 @@ export function AdminPanel() {
             </Card>
           </div>
 
-          {analyticsLoading && <p className="text-gray-500">Ładowanie danych o prowizji...</p>}
+          {analyticsLoading && <p className="text-gray-500">Ĺadowanie danych o prowizji...</p>}
 
           {!analyticsLoading && analytics && (
             <div className="grid gap-4 xl:grid-cols-2">
               <Card className="border-slate-200">
                 <CardContent className="space-y-4 p-5">
-                  <h3 className="text-lg font-semibold">Dochód według użytkowników</h3>
+                  <h3 className="text-lg font-semibold">DochĂłd wedĹ‚ug uĹĽytkownikĂłw</h3>
                   <div className="overflow-hidden rounded-2xl border border-slate-200">
                     <table className="min-w-full divide-y divide-slate-200 text-sm">
                       <thead className="bg-slate-50 text-left text-slate-600">
                         <tr>
-                          <th className="px-4 py-3 font-medium">Użytkownik</th>
+                          <th className="px-4 py-3 font-medium">UĹĽytkownik</th>
                           <th className="px-4 py-3 font-medium">Prowizja</th>
                           <th className="px-4 py-3 font-medium">Zakupy</th>
                         </tr>
@@ -1018,7 +1105,7 @@ export function AdminPanel() {
                         ) : (
                           <tr>
                             <td className="px-4 py-4 text-slate-500" colSpan={3}>
-                              Brak danych dla wybranych filtrów.
+                              Brak danych dla wybranych filtrĂłw.
                             </td>
                           </tr>
                         )}
@@ -1030,7 +1117,7 @@ export function AdminPanel() {
 
               <Card className="border-slate-200">
                 <CardContent className="space-y-4 p-5">
-                  <h3 className="text-lg font-semibold">Dochód według kategorii</h3>
+                  <h3 className="text-lg font-semibold">DochĂłd wedĹ‚ug kategorii</h3>
                   <div className="overflow-hidden rounded-2xl border border-slate-200">
                     <table className="min-w-full divide-y divide-slate-200 text-sm">
                       <thead className="bg-slate-50 text-left text-slate-600">
@@ -1052,7 +1139,7 @@ export function AdminPanel() {
                         ) : (
                           <tr>
                             <td className="px-4 py-4 text-slate-500" colSpan={3}>
-                              Brak danych dla wybranych filtrów.
+                              Brak danych dla wybranych filtrĂłw.
                             </td>
                           </tr>
                         )}
@@ -1072,7 +1159,7 @@ export function AdminPanel() {
                   <table className="min-w-full divide-y divide-slate-200 text-sm">
                     <thead className="bg-slate-50 text-left text-slate-600">
                       <tr>
-                        <th className="px-4 py-3 font-medium">Użytkownik</th>
+                        <th className="px-4 py-3 font-medium">UĹĽytkownik</th>
                         <th className="px-4 py-3 font-medium">Wydarzenie</th>
                         <th className="px-4 py-3 font-medium">Kategoria</th>
                         <th className="px-4 py-3 font-medium">Zakup</th>
@@ -1096,7 +1183,7 @@ export function AdminPanel() {
                       ) : (
                         <tr>
                           <td className="px-4 py-4 text-slate-500" colSpan={5}>
-                            Brak transakcji dla wybranych filtrów.
+                            Brak transakcji dla wybranych filtrĂłw.
                           </td>
                         </tr>
                       )}
@@ -1113,20 +1200,256 @@ export function AdminPanel() {
             <CardContent className="space-y-4 p-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-lg font-semibold">Użytkownicy i opinie</h2>
+                  <h2 className="text-lg font-semibold">Użytkownicy</h2>
                   <p className="text-sm text-slate-600">
-                    Lista użytkowników z ich średnią oceną ze wszystkich wydarzeń oraz zapisanymi opiniami.
+                    Wyszukuj wszystkich użytkowników niezależnie od tego, czy wystawili opinię.
+                  </p>
+                </div>
+                <Button type="button" variant="outline" onClick={() => void loadAdminUsers()}>
+                  Odśwież dane
+                </Button>
+              </div>
+
+              <form onSubmit={handleAdminUsersSubmit} className="grid gap-3 md:grid-cols-3">
+                <div className="md:col-span-2">
+                  <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="adminUsersSearch">
+                    Szukaj użytkownika
+                  </label>
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+                    <input
+                      id="adminUsersSearch"
+                      value={adminUsersFilters.search}
+                      onChange={(e) =>
+                        setAdminUsersFilters((prev) => ({ ...prev, search: e.target.value }))
+                      }
+                      placeholder="Nazwa użytkownika lub e-mail"
+                      className="w-full rounded-md border border-slate-300 bg-white py-2 pl-10 pr-3 text-sm"
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2 md:col-span-3">
+                  <Button type="submit">Filtruj</Button>
+                  <Button type="button" variant="outline" onClick={clearAdminUsersFilters}>
+                    Wyczyść filtry
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+
+          {adminUsersError && (
+            <Card className="border-red-200 bg-red-50">
+              <CardContent className="p-4 text-red-700">{adminUsersError}</CardContent>
+            </Card>
+          )}
+
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <Card>
+              <CardContent className="flex items-center justify-between p-5">
+                <div>
+                  <p className="text-sm text-slate-500">Wszyscy użytkownicy</p>
+                  <p className="text-3xl font-semibold">
+                    {adminUsers ? adminUsers.summary.usersCount : adminUsersLoading ? "..." : "0"}
+                  </p>
+                </div>
+                <Users className="size-10 text-slate-600" />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="flex items-center justify-between p-5">
+                <div>
+                  <p className="text-sm text-slate-500">Zbanowani</p>
+                  <p className="text-3xl font-semibold">
+                    {adminUsers ? adminUsers.summary.bannedCount : adminUsersLoading ? "..." : "0"}
+                  </p>
+                </div>
+                <ShieldAlert className="size-10 text-rose-600" />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="flex items-center justify-between p-5">
+                <div>
+                  <p className="text-sm text-slate-500">Administratorzy</p>
+                  <p className="text-3xl font-semibold">
+                    {adminUsers ? adminUsers.summary.adminCount : adminUsersLoading ? "..." : "0"}
+                  </p>
+                </div>
+                <AlertTriangle className="size-10 text-amber-600" />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="flex items-center justify-between p-5">
+                <div>
+                  <p className="text-sm text-slate-500">Zweryfikowani</p>
+                  <p className="text-3xl font-semibold">
+                    {adminUsers ? adminUsers.summary.verifiedCount : adminUsersLoading ? "..." : "0"}
+                  </p>
+                </div>
+                <CalendarRange className="size-10 text-emerald-600" />
+              </CardContent>
+            </Card>
+          </div>
+
+          {adminUsersLoading && <p className="text-gray-500">Ładowanie użytkowników...</p>}
+
+          {!adminUsersLoading && adminUsers && (
+            <div className="grid gap-4">
+              {adminUsers.users.length > 0 ? (
+                adminUsers.users.map((entry) => (
+                  <Card key={entry.userId} className="border-slate-200">
+                    <CardContent className="space-y-4 p-5">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="space-y-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="text-xl font-semibold text-slate-900">{entry.username}</h3>
+                            {entry.isAdmin && <Badge>Admin</Badge>}
+                            {entry.isVerified && <Badge variant="outline">Zweryfikowany</Badge>}
+                            {entry.isBanned ? <Badge variant="destructive">Zablokowany</Badge> : <Badge variant="outline">Aktywny</Badge>}
+                          </div>
+                          <p className="text-sm text-slate-500">{entry.email || "Brak e-maila"}</p>
+                          <p className="text-sm text-slate-500">
+                            Średnia ocena: {entry.averageRating.toFixed(2)} / 5 | Oceny: {entry.ratingsCount} | Opinie:{" "}
+                            {entry.reviewsCount}
+                          </p>
+                          <p className="text-sm text-slate-500">
+                            Aktywność: {entry.firstRatedAt ? formatDate(entry.firstRatedAt) : "Brak danych"} -{" "}
+                            {entry.lastRatedAt ? formatDate(entry.lastRatedAt) : "Brak danych"}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-semibold text-slate-900">Banowanie użytkownika</p>
+                            <p className="text-xs text-slate-500">
+                              {entry.isBanned
+                                ? "Konto jest zablokowane."
+                                : "Ustaw datę końca bana i krótki opis."}
+                            </p>
+                          </div>
+                          {entry.isBanned ? (
+                            <Button type="button" variant="destructive" onClick={() => void handleUnbanUser(entry.userId)}>
+                              Odbanuj
+                            </Button>
+                          ) : (
+                            <Badge variant="outline">Aktywny</Badge>
+                          )}
+                        </div>
+
+                        {entry.isBanned ? (
+                          <div className="mt-4 grid gap-3 md:grid-cols-3">
+                            <div className="md:col-span-2 space-y-2">
+                              <p className="text-sm text-slate-600">
+                                Do:{" "}
+                                <span className="font-medium text-slate-900">
+                                  {entry.banUntil ? formatDate(entry.banUntil) : "Brak daty"}
+                                </span>
+                              </p>
+                              <p className="text-sm text-slate-600">
+                                Opis:{" "}
+                                <span className="font-medium text-slate-900">
+                                  {entry.banReason || "Brak opisu"}
+                                </span>
+                              </p>
+                              <p className="text-xs text-slate-500">
+                                Nałożono: {entry.bannedAt ? formatDate(entry.bannedAt) : "Brak danych"}
+                              </p>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="mt-4 grid gap-3 md:grid-cols-3">
+                            <div>
+                              <label className="mb-1 block text-xs font-medium text-slate-700" htmlFor={`adminBanUntil-${entry.userId}`}>
+                                Ban do
+                              </label>
+                              <input
+                                id={`adminBanUntil-${entry.userId}`}
+                                type="datetime-local"
+                                value={banDrafts[entry.userId]?.until ?? ""}
+                                onChange={(e) =>
+                                  setBanDrafts((prev) => ({
+                                    ...prev,
+                                    [entry.userId]: {
+                                      until: e.target.value,
+                                      reason: prev[entry.userId]?.reason ?? "",
+                                    },
+                                  }))
+                                }
+                                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                              />
+                            </div>
+                            <div className="md:col-span-2">
+                              <label className="mb-1 block text-xs font-medium text-slate-700" htmlFor={`adminBanReason-${entry.userId}`}>
+                                Opis bana
+                              </label>
+                              <textarea
+                                id={`adminBanReason-${entry.userId}`}
+                                value={banDrafts[entry.userId]?.reason ?? ""}
+                                onChange={(e) =>
+                                  setBanDrafts((prev) => ({
+                                    ...prev,
+                                    [entry.userId]: {
+                                      until: prev[entry.userId]?.until ?? "",
+                                      reason: e.target.value,
+                                    },
+                                  }))
+                                }
+                                rows={3}
+                                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                                placeholder="Krótko opisz powód blokady"
+                              />
+                            </div>
+                            <div className="md:col-span-3 flex justify-end">
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                onClick={() =>
+                                  void handleBanUser(
+                                    entry.userId,
+                                    banDrafts[entry.userId]?.until ?? "",
+                                    banDrafts[entry.userId]?.reason ?? ""
+                                  )
+                                }
+                              >
+                                Zbanuj użytkownika
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              ) : (
+                <Card>
+                  <CardContent className="p-6 text-gray-600">Brak użytkowników dla wybranych filtrów.</CardContent>
+                </Card>
+              )}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="opinions" className="space-y-4">
+          <Card className="border-slate-200">
+            <CardContent className="space-y-4 p-5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-semibold">Opinie użytkowników</h2>
+                  <p className="text-sm text-slate-600">
+                    Lista użytkowników, którzy wystawili oceny, z ich średnią i zapisanymi opiniami.
                   </p>
                 </div>
                 <Button type="button" variant="outline" onClick={() => void loadUserReviews()}>
-                  Odśwież dane
+                  OdĹ›wieĹĽ dane
                 </Button>
               </div>
 
               <form onSubmit={handleUserReviewsSubmit} className="grid gap-3 md:grid-cols-4">
                 <div className="md:col-span-2">
                   <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="userReviewsSearch">
-                    Szukaj użytkownika
+                    Szukaj uĹĽytkownika
                   </label>
                   <div className="relative">
                     <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
@@ -1136,14 +1459,14 @@ export function AdminPanel() {
                       onChange={(e) =>
                         setUserReviewsFilters((prev) => ({ ...prev, search: e.target.value }))
                       }
-                      placeholder="Wpisz nazwę użytkownika"
+                      placeholder="Wpisz nazwÄ™ uĹĽytkownika"
                       className="w-full rounded-md border border-slate-300 bg-white py-2 pl-10 pr-3 text-sm"
                     />
                   </div>
                 </div>
                 <div>
                   <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="userReviewsMin">
-                    Średnia od
+                    Ĺšrednia od
                   </label>
                   <input
                     id="userReviewsMin"
@@ -1160,7 +1483,7 @@ export function AdminPanel() {
                 </div>
                 <div>
                   <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="userReviewsMax">
-                    Średnia do
+                    Ĺšrednia do
                   </label>
                   <input
                     id="userReviewsMax"
@@ -1206,7 +1529,7 @@ export function AdminPanel() {
                 <div className="flex flex-wrap gap-2 md:col-span-4">
                   <Button type="submit">Filtruj</Button>
                   <Button type="button" variant="outline" onClick={clearUserReviewsFilters}>
-                    Wyczyść filtry
+                    WyczyĹ›Ä‡ filtry
                   </Button>
                 </div>
               </form>
@@ -1223,7 +1546,7 @@ export function AdminPanel() {
             <Card>
               <CardContent className="flex items-center justify-between p-5">
                 <div>
-                  <p className="text-sm text-slate-500">Średnia ocena</p>
+                  <p className="text-sm text-slate-500">Ĺšrednia ocena</p>
                   <p className="text-3xl font-semibold">
                     {userReviews ? `${userReviews.summary.averageRating.toFixed(2)} / 5` : userReviewsLoading ? "..." : "0.00 / 5"}
                   </p>
@@ -1234,7 +1557,7 @@ export function AdminPanel() {
             <Card>
               <CardContent className="flex items-center justify-between p-5">
                 <div>
-                  <p className="text-sm text-slate-500">Użytkownicy</p>
+                  <p className="text-sm text-slate-500">UĹĽytkownicy</p>
                   <p className="text-3xl font-semibold">
                     {userReviews ? userReviews.summary.usersCount : userReviewsLoading ? "..." : "0"}
                   </p>
@@ -1266,7 +1589,7 @@ export function AdminPanel() {
             </Card>
           </div>
 
-          {userReviewsLoading && <p className="text-gray-500">Ładowanie opinii użytkowników...</p>}
+          {userReviewsLoading && <p className="text-gray-500">Ĺadowanie opinii uĹĽytkownikĂłw...</p>}
 
           {!userReviewsLoading && userReviews && (
             <div className="grid gap-4">
@@ -1281,11 +1604,11 @@ export function AdminPanel() {
                             <Badge variant="outline">{renderStars(entry.averageRating)}</Badge>
                           </div>
                           <p className="text-sm text-slate-500">
-                            Średnia: {entry.averageRating.toFixed(2)} / 5 | Oceny: {entry.ratingsCount} | Opinie:{" "}
+                            Ĺšrednia: {entry.averageRating.toFixed(2)} / 5 | Oceny: {entry.ratingsCount} | Opinie:{" "}
                             {entry.reviewsCount}
                           </p>
                           <p className="text-sm text-slate-500">
-                            Zakres aktywności:{" "}
+                            Zakres aktywnoĹ›ci:{" "}
                             {entry.firstRatedAt ? formatDate(entry.firstRatedAt) : "Brak danych"} -{" "}
                             {entry.lastRatedAt ? formatDate(entry.lastRatedAt) : "Brak danych"}
                           </p>
@@ -1322,11 +1645,11 @@ export function AdminPanel() {
                       <div className="rounded-2xl border border-slate-200 bg-white p-4">
                         <div className="flex flex-wrap items-center justify-between gap-3">
                           <div>
-                            <p className="text-sm font-semibold text-slate-900">Banowanie użytkownika</p>
+                            <p className="text-sm font-semibold text-slate-900">Banowanie uĹĽytkownika</p>
                             <p className="text-xs text-slate-500">
                               {entry.isBanned
                                 ? "Konto jest zablokowane."
-                                : "Ustaw datę końca bana i krótki opis."}
+                                : "Ustaw datÄ™ koĹ„ca bana i krĂłtki opis."}
                             </p>
                           </div>
                           {entry.isBanned ? (
@@ -1352,7 +1675,7 @@ export function AdminPanel() {
                                 </span>
                               </p>
                               <p className="text-xs text-slate-500">
-                                Nałożono: {entry.bannedAt ? formatDate(entry.bannedAt) : "Brak danych"}
+                                NaĹ‚oĹĽono: {entry.bannedAt ? formatDate(entry.bannedAt) : "Brak danych"}
                               </p>
                             </div>
                             <div className="flex items-end">
@@ -1401,7 +1724,7 @@ export function AdminPanel() {
                                 }
                                 rows={3}
                                 className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
-                                placeholder="Krótko opisz powód blokady"
+                                placeholder="KrĂłtko opisz powĂłd blokady"
                               />
                             </div>
                             <div className="md:col-span-3 flex justify-end">
@@ -1416,7 +1739,7 @@ export function AdminPanel() {
                                   )
                                 }
                               >
-                                Zbanuj użytkownika
+                                Zbanuj uĹĽytkownika
                               </Button>
                             </div>
                           </div>
@@ -1427,7 +1750,7 @@ export function AdminPanel() {
                 ))
               ) : (
                 <Card>
-                  <CardContent className="p-6 text-gray-600">Brak użytkowników dla wybranych filtrów.</CardContent>
+                  <CardContent className="p-6 text-gray-600">Brak uĹĽytkownikĂłw dla wybranych filtrĂłw.</CardContent>
                 </Card>
               )}
             </div>
@@ -1441,7 +1764,7 @@ export function AdminPanel() {
                 <div>
                   <h2 className="text-lg font-semibold">Wyszukiwanie i sortowanie</h2>
                   <p className="text-sm text-slate-600">
-                    Szukaj po tytule, kategorii, autorze, lokalizacji, dacie i liczbach biletów.
+                    Szukaj po tytule, kategorii, autorze, lokalizacji, dacie i liczbach biletĂłw.
                   </p>
                 </div>
                 <p className="text-sm text-slate-600">
@@ -1452,7 +1775,7 @@ export function AdminPanel() {
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                 <div className="md:col-span-2 xl:col-span-2">
                   <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="eventSearch">
-                    Szukaj wydarzeń
+                    Szukaj wydarzeĹ„
                   </label>
                   <div className="relative">
                     <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
@@ -1460,14 +1783,14 @@ export function AdminPanel() {
                       id="eventSearch"
                       value={eventSearch}
                       onChange={(e) => setEventSearch(e.target.value)}
-                      placeholder="Tytuł, kategoria, lokalizacja, autor, data, ceny..."
+                      placeholder="TytuĹ‚, kategoria, lokalizacja, autor, data, ceny..."
                       className="w-full rounded-md border border-slate-300 bg-white py-2 pl-10 pr-3 text-sm"
                     />
                   </div>
                 </div>
                 <div>
                   <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="eventSortBy">
-                    Sortuj według
+                    Sortuj wedĹ‚ug
                   </label>
                   <select
                     id="eventSortBy"
@@ -1476,13 +1799,13 @@ export function AdminPanel() {
                     className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
                   >
                     <option value="date">Daty wydarzenia</option>
-                    <option value="title">Tytułu</option>
+                    <option value="title">TytuĹ‚u</option>
                     <option value="category">Kategorii</option>
                     <option value="creator">Autora</option>
                     <option value="location">Lokalizacji</option>
                     <option value="price">Ceny biletu</option>
-                    <option value="available">Dostępnych biletów</option>
-                    <option value="sold">Sprzedanych biletów</option>
+                    <option value="available">DostÄ™pnych biletĂłw</option>
+                    <option value="sold">Sprzedanych biletĂłw</option>
                     <option value="createdAt">Daty utworzenia</option>
                   </select>
                 </div>
@@ -1496,15 +1819,15 @@ export function AdminPanel() {
                     onChange={(e) => setEventSortDirection(e.target.value as "asc" | "desc")}
                     className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
                   >
-                    <option value="asc">Rosnąco</option>
-                    <option value="desc">Malejąco</option>
+                    <option value="asc">RosnÄ…co</option>
+                    <option value="desc">MalejÄ…co</option>
                   </select>
                 </div>
               </div>
 
               <div className="flex flex-wrap gap-2">
                 <Button type="button" variant="outline" onClick={() => setEventSearch("")}>
-                  Wyczyść wyszukiwanie
+                  WyczyĹ›Ä‡ wyszukiwanie
                 </Button>
                 <Button
                   type="button"
@@ -1526,7 +1849,7 @@ export function AdminPanel() {
                 <div>
                   <h2 className="text-lg font-semibold">Akcje zbiorcze</h2>
                   <p className="text-sm text-slate-600">
-                    Zaznacz wydarzenia i wykonaj operację na wielu pozycjach jednocześnie.
+                    Zaznacz wydarzenia i wykonaj operacjÄ™ na wielu pozycjach jednoczeĹ›nie.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -1539,7 +1862,7 @@ export function AdminPanel() {
                     Zaznacz wszystko
                   </Button>
                   <Button type="button" variant="outline" onClick={clearSelection} disabled={selectedEventIds.size === 0}>
-                    Wyczyść zaznaczenie
+                    WyczyĹ›Ä‡ zaznaczenie
                   </Button>
                 </div>
               </div>
@@ -1547,7 +1870,7 @@ export function AdminPanel() {
               <div className="flex flex-wrap items-end gap-3">
                 <div className="min-w-64 flex-1">
                   <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="bulkCategory">
-                    Przenieś do kategorii
+                    PrzenieĹ› do kategorii
                   </label>
                   <select
                     id="bulkCategory"
@@ -1555,7 +1878,7 @@ export function AdminPanel() {
                     onChange={(e) => setBulkCategory(e.target.value)}
                     className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
                   >
-                    <option value="">Wybierz kategorię</option>
+                    <option value="">Wybierz kategoriÄ™</option>
                     {categories.map((category) => (
                       <option key={category} value={category}>
                         {category}
@@ -1568,7 +1891,7 @@ export function AdminPanel() {
                   onClick={handleBulkMove}
                   disabled={visibleSelectedEvents.length === 0 || bulkActionLoading === "move"}
                 >
-                  {bulkActionLoading === "move" ? "Przenoszenie..." : "Przenieś zaznaczone"}
+                  {bulkActionLoading === "move" ? "Przenoszenie..." : "PrzenieĹ› zaznaczone"}
                 </Button>
                 <Button
                   type="button"
@@ -1576,7 +1899,7 @@ export function AdminPanel() {
                   onClick={handleBulkDelete}
                   disabled={visibleSelectedEvents.length === 0 || bulkActionLoading === "delete"}
                 >
-                  {bulkActionLoading === "delete" ? "Usuwanie..." : "Usuń zaznaczone"}
+                  {bulkActionLoading === "delete" ? "Usuwanie..." : "UsuĹ„ zaznaczone"}
                 </Button>
               </div>
 
@@ -1586,11 +1909,11 @@ export function AdminPanel() {
             </CardContent>
           </Card>
 
-          {loadingData && <p className="text-gray-500">Ładowanie wydarzeń...</p>}
+          {loadingData && <p className="text-gray-500">Ĺadowanie wydarzeĹ„...</p>}
 
           {!loadingData && filteredSortedEvents.length === 0 && (
             <Card>
-              <CardContent className="p-6 text-gray-600">Brak wydarzeń do wyświetlenia.</CardContent>
+              <CardContent className="p-6 text-gray-600">Brak wydarzeĹ„ do wyĹ›wietlenia.</CardContent>
             </Card>
           )}
 
@@ -1639,7 +1962,7 @@ export function AdminPanel() {
                         onClick={() => handleDeleteEvent(eventId)}
                       >
                         <Trash2 className="mr-2 size-4" />
-                        {deletingEventId === eventId ? "Usuwanie..." : "Usuń"}
+                        {deletingEventId === eventId ? "Usuwanie..." : "UsuĹ„"}
                       </Button>
                     </div>
                   </CardContent>

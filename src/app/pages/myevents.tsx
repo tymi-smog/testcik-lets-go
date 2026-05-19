@@ -65,21 +65,22 @@ function getMyEventStats(event: MyEvent) {
     return sum + (Number.isFinite(available) ? available : 0);
   }, 0);
   const eventSoldTickets = Number(event.sold_tickets);
+  const totalSoldFromTypes = tickets.reduce((sum, ticket) => {
+    const sold = Number(ticket.sold);
+    if (Number.isFinite(sold) && sold >= 0) {
+      return sum + sold;
+    }
+    const initialAvailable = Number(ticket.initial_available);
+    const available = Number(ticket.available ?? 0);
+    if (Number.isFinite(initialAvailable) && Number.isFinite(available)) {
+      return sum + Math.max(initialAvailable - available, 0);
+    }
+    return sum;
+  }, 0);
   const totalSoldCount =
     Number.isFinite(eventSoldTickets) && eventSoldTickets >= 0
-      ? eventSoldTickets
-      : tickets.reduce((sum, ticket) => {
-          const sold = Number(ticket.sold);
-          if (Number.isFinite(sold) && sold >= 0) {
-            return sum + sold;
-          }
-          const initialAvailable = Number(ticket.initial_available);
-          const available = Number(ticket.available ?? 0);
-          if (Number.isFinite(initialAvailable) && Number.isFinite(available)) {
-            return sum + Math.max(initialAvailable - available, 0);
-          }
-          return sum;
-        }, 0);
+      ? Math.max(eventSoldTickets, totalSoldFromTypes)
+      : totalSoldFromTypes;
 
   return {
     minTicketPrice: Number.isFinite(minTicketPrice) ? minTicketPrice : 0,

@@ -72,25 +72,28 @@ function getEventStats(event: EventsPageEvent) {
   }, 0);
 
   const totalSoldCount =
+    event.ticketTypes.reduce((sum, ticket) => {
+      const sold = Number(ticket.sold);
+      if (Number.isFinite(sold) && sold >= 0) {
+        return sum + sold;
+      }
+      const initialAvailable = Number(ticket.initial_available);
+      const available = Number(ticket.available ?? 0);
+      if (Number.isFinite(initialAvailable) && Number.isFinite(available)) {
+        return sum + Math.max(initialAvailable - available, 0);
+      }
+      return sum;
+    }, 0);
+
+  const resolvedSoldCount =
     Number.isFinite(event.soldTickets) && event.soldTickets >= 0
-      ? event.soldTickets
-      : event.ticketTypes.reduce((sum, ticket) => {
-          const sold = Number(ticket.sold);
-          if (Number.isFinite(sold) && sold >= 0) {
-            return sum + sold;
-          }
-          const initialAvailable = Number(ticket.initial_available);
-          const available = Number(ticket.available ?? 0);
-          if (Number.isFinite(initialAvailable) && Number.isFinite(available)) {
-            return sum + Math.max(initialAvailable - available, 0);
-          }
-          return sum;
-        }, 0);
+      ? Math.max(event.soldTickets, totalSoldCount)
+      : totalSoldCount;
 
   return {
     minTicketPrice: Number.isFinite(minTicketPrice) ? minTicketPrice : 0,
     totalTicketsCount,
-    totalSoldCount,
+    totalSoldCount: resolvedSoldCount,
   };
 }
 

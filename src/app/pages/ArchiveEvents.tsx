@@ -86,7 +86,7 @@ function getEventStats(event: ArchiveEvent) {
     return sum + (Number.isFinite(available) ? available : 0);
   }, 0);
 
-  const totalSoldCount = event.ticketTypes.reduce((sum, ticket) => {
+  const totalSoldFromTypes = event.ticketTypes.reduce((sum, ticket) => {
     const sold = Number(ticket.sold);
     if (Number.isFinite(sold) && sold >= 0) {
       return sum + sold;
@@ -98,6 +98,11 @@ function getEventStats(event: ArchiveEvent) {
     }
     return sum;
   }, 0);
+
+  const totalSoldCount =
+    Number.isFinite(Number(event.sold_tickets)) && Number(event.sold_tickets) >= 0
+      ? Math.max(Number(event.sold_tickets), totalSoldFromTypes)
+      : totalSoldFromTypes;
 
   return {
     minTicketPrice: Number.isFinite(minTicketPrice) ? minTicketPrice : 0,
